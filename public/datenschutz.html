@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Datenschutz – Plenum</title>
+<link rel="icon" href="/img/icon.png">
+<link rel="stylesheet" href="/fonts/fonts.css">
+<link rel="stylesheet" href="/doc.css">
+</head>
+<body>
+<main class="doc">
+<p class="doc-brand"><img src="/img/icon.png" alt="" width="40" height="40"><span>Plenum</span></p>
+<h1>Datenschutz</h1>
+<p class="stand">Stand: 23. November 2026</p>
+
+<div class="box"><b>Kurz gesagt:</b> Plenum läuft auf dem Computer der Lehrkraft und funktioniert nur im lokalen Netzwerk. Es gibt kein Konto, keinen Cloud-Dienst, keine Telemetrie und keine Werbung. Der Anbieter erhält keine Daten.</div>
+
+<h2>Verantwortlich</h2>
+<p>Anbieter: Tobias Gatterbauer · t.gatterbauer@proton.me. Alle Daten bleiben auf dem Computer der Lehrkraft und den Geräten der Klasse; der Anbieter hat darauf keinen Zugriff. Verantwortlich im Sinne der DSGVO ist die nutzende Lehrkraft bzw. ihre Schule.</p>
+
+<h2>Welche Daten verarbeitet Plenum?</h2>
+<ul>
+<li><b>Lektionen</b> als <code>.plenum</code>-Dateien im Ordner <i>Dokumente\Plenum-Lektionen</i> (änderbar).</li>
+<li><b>Antworten der Klasse</b> (Stimmen, Skalenwerte, Begriffe, offene Antworten, Lösungen, Quizpunkte) – gespeichert als „Stand“ auf dem Computer der Lehrkraft, damit eine Stunde fortgesetzt werden kann.</li>
+<li><b>Zufällige Gerätekennung</b> im Browser der Schülergeräte, damit Antworten nach dem Neuladen zugeordnet bleiben – ohne Namen.</li>
+<li><b>Spitznamen im Quiz</b> – standardmäßig automatisch („Fuchs 12“); eigene Spitznamen nur, wenn die Lehrkraft sie erlaubt. Spitznamen werden nicht gespeichert.</li>
+<li><b>Lokales Fehlerprotokoll</b> mit technischen Meldungen (höchstens ca. 1 MB), ohne Antworten der Klasse.</li>
+</ul>
+<p>IP-Adressen werden nur für die Verbindung genutzt und nicht gespeichert.</p>
+
+<h2>Übertragung im lokalen Netzwerk</h2>
+<p>Die Geräte der Klasse verbinden sich über unverschlüsseltes HTTP direkt mit dem Computer der Lehrkraft. Im selben Netzwerk könnten Dritte mitlesen – daher ein geschütztes WLAN oder einen Hotspot mit Passwort verwenden und keine sensiblen persönlichen Daten erfragen. Geräte erhalten nur die aktuell gezeigte Folie und Quizlösungen erst bei der Auflösung. Der Lehrkraft-Bereich ist nur am Computer der Lehrkraft erreichbar und mit einem zufälligen Schlüssel je Programmstart geschützt.</p>
+
+<h2>Internet</h2>
+<p>Plenum selbst verbindet sich nicht mit dem Internet. Installation und Updates laufen über den Microsoft Store. Links öffnen sich nur auf Klick im Browser. Bei der KI-Funktion kopiert die Lehrkraft einen Prompt selbst in einen KI-Chat ihrer Wahl – Plenum sendet dabei nichts. Material wie Buchseiten oder Arbeitsblätter hängt die Lehrkraft im KI-Chat selbst an; Plenum erhält diese Dateien nicht. Bitte keine personenbezogenen Daten, Fotos oder Namen von Schüler:innen in Prompts oder Material verwenden.</p>
+
+<h2>Löschen</h2>
+<ul>
+<li>Stände: in der Präsentation unter <i>Speichern</i> löschen; mit einer Lektion werden auch ihre Stände gelöscht.</li>
+<li>„Rangliste löschen“ im Moderationsfenster entfernt Punkte und Spitznamen.</li>
+<li>Bei der Deinstallation entfernt Windows Stände, Einstellungen und Protokoll; Lektionen im Ordner <i>Dokumente\Plenum-Lektionen</i> bleiben erhalten.</li>
+</ul>
+
+<p class="foot">Ausführliche Fassung: <code>PRIVACY.md</code> im Quellcode von Plenum.</p>
+</main>
+</body>
+</html>

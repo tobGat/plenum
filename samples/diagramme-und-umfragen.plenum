@@ -1,0 +1,983 @@
+{
+  "format": "plenum-lektion",
+  "version": 1,
+  "id": "L-beispiel-diagramme",
+  "createdAt": "2026-11-23T08:00:00.000Z",
+  "updatedAt": "2026-11-23T08:00:00.000Z",
+  "appVersion": "1.0.0",
+  "title": "Diagramme lesen & Umfragen durchschauen",
+  "subject": "Deutsch · Medienbildung",
+  "grade": "ab 12 Jahren",
+  "description": "Beispiellektion mit allen Folientypen: echte Daten aus Österreich lesen, Live-Umfragen auswerten, Manipulation durchschauen, Quiz mit Rangliste.",
+  "sections": [
+    {
+      "id": "S-einstieg",
+      "name": "Einstieg",
+      "color": "indigo",
+      "icon": "compass"
+    },
+    {
+      "id": "S-lesen",
+      "name": "Diagramme lesen",
+      "color": "teal",
+      "icon": "bars"
+    },
+    {
+      "id": "S-umfragen",
+      "name": "Umfragen durchschauen",
+      "color": "rose",
+      "icon": "eye"
+    },
+    {
+      "id": "S-quiz",
+      "name": "Quiz & Abschluss",
+      "color": "amber",
+      "icon": "trophy"
+    }
+  ],
+  "slides": [
+    {
+      "id": "s-titel",
+      "section": "S-einstieg",
+      "type": "title",
+      "title": "Diagramme lesen & Umfragen durchschauen",
+      "kicker": "Beispiellektion · Plenum",
+      "subtitle": "Wie Zahlen informieren – und wie sie uns beeinflussen können",
+      "topics": [
+        {
+          "text": "Einstieg",
+          "section": "Einstieg"
+        },
+        {
+          "text": "Diagramme lesen",
+          "section": "Diagramme lesen"
+        },
+        {
+          "text": "Umfragen durchschauen",
+          "section": "Umfragen durchschauen"
+        },
+        {
+          "text": "Quiz & Abschluss",
+          "section": "Quiz & Abschluss"
+        }
+      ],
+      "notes": "Oben rechts auf „Beitreten“ tippen: Link und QR-Code für die Klasse. Ohne zweites Gerät: „Schüleransicht testen“.",
+      "art": "chart",
+      "layout": "card"
+    },
+    {
+      "id": "s-wolke",
+      "section": "S-einstieg",
+      "type": "wordcloud",
+      "title": "Woran denkst du bei „Diagramm“?",
+      "question": "Schreibe bis zu drei Begriffe, die dir dazu einfallen.",
+      "maxWords": 3,
+      "approval": false,
+      "discussion": "Welche Begriffe kommen am häufigsten vor? Wo begegnen euch Diagramme im Alltag?"
+    },
+    {
+      "id": "s-skala-vorher",
+      "section": "S-einstieg",
+      "type": "scale",
+      "title": "Wie sicher bist du schon?",
+      "question": "Schätze dich ehrlich ein. Die Abstimmung ist anonym.",
+      "statements": [
+        "Ich kann ein Diagramm genau lesen.",
+        "Ich erkenne, wenn ein Diagramm übertreibt.",
+        "Ich kann ein Diagramm mit eigenen Worten beschreiben."
+      ],
+      "steps": 5,
+      "minLabel": "gar nicht",
+      "maxLabel": "sehr sicher",
+      "notes": "Am Ende der Stunde kommt dieselbe Skala noch einmal – so wird der Lernzuwachs sichtbar."
+    },
+    {
+      "id": "s-fuenf",
+      "section": "S-lesen",
+      "type": "info",
+      "title": "Fünf Angaben, die jedes Diagramm braucht",
+      "cards": [
+        {
+          "title": "1 · Thema",
+          "text": "Titel und genaue Fragestellung: Worum geht es?"
+        },
+        {
+          "title": "2 · Kategorien",
+          "text": "Was wird verglichen? Zum Beispiel Altersgruppen, Jahre oder Plattformen."
+        },
+        {
+          "title": "3 · Einheit",
+          "text": "Prozent, Stunden, Gramm, Personen …"
+        },
+        {
+          "title": "4 · Legende",
+          "text": "Wofür steht welche Farbe?"
+        },
+        {
+          "title": "5 · Quelle",
+          "text": "Wer hat die Daten erhoben oder veröffentlicht – und wann?"
+        },
+        {
+          "title": "Merke",
+          "text": "Fehlt eine dieser Angaben, kann man das Diagramm nicht sicher deuten."
+        }
+      ],
+      "graphic": {
+        "src": "lib:lupe",
+        "pos": "right",
+        "size": "s"
+      }
+    },
+    {
+      "id": "s-typ",
+      "section": "S-lesen",
+      "type": "sort",
+      "title": "Welcher Diagrammtyp passt?",
+      "question": "Ordne jede Darstellung dem anschaulichsten Diagrammtyp zu.",
+      "categories": [
+        {
+          "name": "Säulen",
+          "items": [
+            "Einwohnerzahl der fünf größten Städte Österreichs",
+            "ausgeliehene Bücher pro Klasse"
+          ]
+        },
+        {
+          "name": "Linie",
+          "items": [
+            "Temperaturverlauf über eine Woche",
+            "Größe einer Sonnenblume Woche für Woche"
+          ]
+        },
+        {
+          "name": "Kreis",
+          "items": [
+            "Wofür ich mein Taschengeld ausgebe (Anteile)",
+            "Sitzverteilung im Gemeinderat"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s-social",
+      "section": "S-lesen",
+      "type": "mc",
+      "title": "Echte Daten lesen: Social Media 2026",
+      "question": "Wie groß ist der Unterschied zwischen YouTube und Discord?",
+      "options": [
+        {
+          "text": "58 Prozent",
+          "correct": false
+        },
+        {
+          "text": "58 Prozentpunkte",
+          "correct": true
+        },
+        {
+          "text": "94 Prozentpunkte",
+          "correct": false
+        },
+        {
+          "text": "18 Prozentpunkte",
+          "correct": false
+        }
+      ],
+      "explanation": "76 % minus 18 % ergibt 58 Prozentpunkte. Der Unterschied zwischen zwei Prozentwerten heißt Prozentpunkte.",
+      "chart": {
+        "type": "hbar",
+        "title": "Welche Plattformen nutzen 11- bis 17-Jährige in Österreich? (2026, Angaben in %)",
+        "labels": [
+          "WhatsApp",
+          "YouTube",
+          "Snapchat",
+          "TikTok",
+          "Instagram",
+          "Pinterest",
+          "Roblox",
+          "Discord"
+        ],
+        "series": [
+          {
+            "name": "Nutzung",
+            "values": [
+              82,
+              76,
+              65,
+              64,
+              64,
+              31,
+              23,
+              18
+            ]
+          }
+        ],
+        "unit": "%",
+        "source": "Quelle: Jugend-Internet-Monitor 2026, Saferinternet.at / Institut für Jugendkulturforschung. 500 Befragte, 11–17 Jahre, Mehrfachnennung möglich."
+      }
+    },
+    {
+      "id": "s-umfrage-social",
+      "section": "S-lesen",
+      "type": "poll",
+      "title": "Welche Plattformen nutzt ihr?",
+      "hint": "Mehrfachnennung möglich: Wähle alle Plattformen, die du nutzt, und schicke dann ab.",
+      "options": [
+        "WhatsApp",
+        "YouTube",
+        "Snapchat",
+        "TikTok",
+        "Instagram",
+        "Pinterest",
+        "Roblox",
+        "Discord"
+      ],
+      "multi": true,
+      "compareName": "Österreich 11–17 J.",
+      "compareValues": [
+        82,
+        76,
+        65,
+        64,
+        64,
+        31,
+        23,
+        18
+      ],
+      "compareSource": "Jugend-Internet-Monitor 2026, Saferinternet.at",
+      "discussion": "Schaltet den Österreich-Vergleich ein: Wo liegt eure Klasse darüber, wo darunter? Formuliert zwei Sätze mit „im Vergleich zu“ oder „im Gegensatz zu“."
+    },
+    {
+      "id": "s-prozentpunkte",
+      "section": "S-lesen",
+      "type": "info",
+      "title": "Achtung: Prozent oder Prozentpunkte?",
+      "cards": [
+        {
+          "title": "Prozentpunkte",
+          "text": "Der einfache Unterschied zwischen zwei Prozentwerten.\nSnapchat: 74 % (2025) → 65 % (2026)\nRückgang um 9 Prozentpunkte."
+        },
+        {
+          "title": "Prozent",
+          "text": "Die Veränderung im Verhältnis zum alten Wert.\n9 von 74 sind rund 12 Prozent.\nDie Nutzung ist also um etwa 12 Prozent gesunken."
+        },
+        {
+          "title": "Merke",
+          "text": "„Um 9 Prozent gesunken“ wäre hier falsch.\nWer Prozentwerte vergleicht, spricht von Prozentpunkten."
+        }
+      ],
+      "source": "Zahlen: Jugend-Internet-Monitor 2026, Saferinternet.at (2025er-Wert aus der gemeldeten Veränderung berechnet)."
+    },
+    {
+      "id": "s-geschlecht",
+      "section": "S-lesen",
+      "type": "mc",
+      "title": "Echte Daten lesen: Mädchen und Burschen",
+      "question": "Welche Aussage ist die Hauptaussage dieses Diagramms?",
+      "options": [
+        {
+          "text": "YouTube ist die beliebteste Plattform.",
+          "correct": false
+        },
+        {
+          "text": "Bei manchen Plattformen unterscheidet sich die Nutzung nach Geschlecht stark, bei anderen kaum.",
+          "correct": true
+        },
+        {
+          "text": "Burschen sind häufiger online als Mädchen.",
+          "correct": false
+        },
+        {
+          "text": "Pinterest verliert an Bedeutung.",
+          "correct": false
+        }
+      ],
+      "explanation": "Bei Pinterest, Discord und Twitch sind die Unterschiede groß, bei YouTube und TikTok liegen beide Gruppen nah beieinander. Über die Online-Zeit oder Entwicklungen sagt das Diagramm nichts.",
+      "chart": {
+        "type": "bar",
+        "title": "Plattformnutzung nach Geschlecht (2026, Angaben in %)",
+        "labels": [
+          "Pinterest",
+          "Discord",
+          "Twitch",
+          "YouTube",
+          "TikTok"
+        ],
+        "series": [
+          {
+            "name": "Mädchen",
+            "values": [
+              55,
+              8,
+              5,
+              73,
+              61
+            ]
+          },
+          {
+            "name": "Burschen",
+            "values": [
+              8,
+              28,
+              23,
+              79,
+              67
+            ]
+          }
+        ],
+        "unit": "%",
+        "source": "Quelle: Jugend-Internet-Monitor 2026, Saferinternet.at (zitiert nach leadersnet.at, 26.1.2026)."
+      }
+    },
+    {
+      "id": "s-kinder",
+      "section": "S-lesen",
+      "type": "mc",
+      "title": "Echte Daten lesen: Kreisdiagramm",
+      "question": "Welche Aussage lässt sich aus dem Diagramm NICHT ableiten?",
+      "options": [
+        {
+          "text": "Die meisten verunglückten Kinder waren im Pkw unterwegs.",
+          "correct": false
+        },
+        {
+          "text": "Fast jedes fünfte verunglückte Kind war mit dem E-Scooter unterwegs.",
+          "correct": false
+        },
+        {
+          "text": "E-Scooter-Fahren ist gefährlicher als Radfahren.",
+          "correct": true
+        },
+        {
+          "text": "Auf Fahrrad und E-Scooter zusammen entfallen mehr als 40 Prozent.",
+          "correct": false
+        }
+      ],
+      "explanation": "Das Diagramm zeigt nur Anteile an den Verunglückten. Wie viele Kinder insgesamt wie oft mit welchem Verkehrsmittel unterwegs sind, steht nicht darin – deshalb kann man nicht sagen, was gefährlicher ist.",
+      "chart": {
+        "type": "pie",
+        "title": "Im Straßenverkehr verunglückte Kinder (0–14 Jahre) 2025 nach Verkehrsart",
+        "labels": [
+          "Pkw",
+          "Fahrrad",
+          "E-Scooter",
+          "zu Fuß",
+          "Moped",
+          "Sonstiges"
+        ],
+        "series": [
+          {
+            "name": "Kinder",
+            "values": [
+              1112,
+              810,
+              646,
+              566,
+              144,
+              281
+            ]
+          }
+        ],
+        "source": "Quelle: Statistik Austria, Statistik der Straßenverkehrsunfälle 2025 (STATkompakt, 2026)."
+      }
+    },
+    {
+      "id": "s-beschreibung",
+      "section": "S-lesen",
+      "type": "truefalse",
+      "title": "Beschreibung oder Meinung?",
+      "question": "Gehört der Satz in eine sachliche Diagrammbeschreibung?",
+      "labels": [
+        "Beschreibung",
+        "Meinung"
+      ],
+      "items": [
+        {
+          "text": "WhatsApp liegt mit 82 Prozent an der Spitze.",
+          "correct": true,
+          "explanation": "Das steht genau so im Diagramm."
+        },
+        {
+          "text": "TikTok macht Jugendliche süchtig.",
+          "correct": false,
+          "explanation": "Eine Behauptung, die das Diagramm nicht zeigt."
+        },
+        {
+          "text": "Discord wird mit 18 Prozent am seltensten genannt.",
+          "correct": true,
+          "explanation": "Sachlich und mit Zahl belegt."
+        },
+        {
+          "text": "Zum Glück nutzen nur wenige Roblox.",
+          "correct": false,
+          "explanation": "„Zum Glück“ ist eine Wertung."
+        },
+        {
+          "text": "YouTube und Snapchat trennen 11 Prozentpunkte.",
+          "correct": true,
+          "explanation": "76 % minus 65 % – korrekt mit Prozentpunkten."
+        }
+      ]
+    },
+    {
+      "id": "s-co2",
+      "section": "S-lesen",
+      "type": "mc",
+      "title": "Klimaverträglich unterwegs",
+      "question": "Welcher Satz beschreibt das Diagramm richtig?",
+      "options": [
+        {
+          "text": "In Führung liegt die Bahn mit den wenigsten Emissionen, das Schlusslicht bildet der Inlandsflug.",
+          "correct": true
+        },
+        {
+          "text": "Der Linienbus verursacht mehr Emissionen als ein durchschnittlicher Pkw.",
+          "correct": false
+        },
+        {
+          "text": "Das E-Auto liegt an vorletzter Stelle.",
+          "correct": false
+        },
+        {
+          "text": "Reisebus und Bahn liegen gleichauf.",
+          "correct": false
+        }
+      ],
+      "explanation": "Die Bahn kommt auf rund 8 g pro Person und Kilometer, der Inlandsflug auf rund 431 g – mehr als das Fünfzigfache.",
+      "chart": {
+        "type": "hbar",
+        "title": "Treibhausgase pro Person und Kilometer (g CO₂-Äquivalent, gerundet)",
+        "labels": [
+          "Bahn",
+          "Reisebus",
+          "Linienbus",
+          "E-Auto",
+          "Pkw (Durchschnitt)",
+          "Inlandsflug"
+        ],
+        "series": [
+          {
+            "name": "Gramm",
+            "values": [
+              8,
+              48,
+              55,
+              95,
+              220,
+              431
+            ]
+          }
+        ],
+        "unit": "g",
+        "source": "Quelle: Umweltbundesamt Österreich, Emissionskennzahlen Verkehrsmittel (Stand Mai 2026), eigene Rundung."
+      }
+    },
+    {
+      "id": "s-luecken",
+      "section": "S-lesen",
+      "type": "gap",
+      "title": "Ein Diagramm beschreiben",
+      "tip": "Wortkasten: Balkendiagramm · Jugend-Internet-Monitor · WhatsApp · YouTube · Discord · Prozentpunkte",
+      "text": "Das [[Balkendiagramm]] zeigt, welche Plattformen 11- bis 17-Jährige in Österreich nutzen. Die Daten stammen aus dem [[Jugend-Internet-Monitor]] 2026.\nAn der Spitze liegt [[WhatsApp]] mit 82 Prozent, knapp dahinter folgt [[YouTube]] mit 76 Prozent. Am seltensten wird [[Discord]] genannt. Zwischen YouTube und Discord liegen 58 [[Prozentpunkte]].",
+      "chart": {
+        "type": "hbar",
+        "title": "Welche Plattformen nutzen 11- bis 17-Jährige in Österreich? (2026, Angaben in %)",
+        "labels": [
+          "WhatsApp",
+          "YouTube",
+          "Snapchat",
+          "TikTok",
+          "Instagram",
+          "Pinterest",
+          "Roblox",
+          "Discord"
+        ],
+        "series": [
+          {
+            "name": "Nutzung",
+            "values": [
+              82,
+              76,
+              65,
+              64,
+              64,
+              31,
+              23,
+              18
+            ]
+          }
+        ],
+        "unit": "%",
+        "source": "Quelle: Jugend-Internet-Monitor 2026, Saferinternet.at."
+      }
+    },
+    {
+      "id": "s-auftrag",
+      "section": "S-lesen",
+      "type": "task",
+      "title": "Jetzt du: ein Diagramm beschreiben",
+      "pages": "Heft",
+      "tasks": [
+        {
+          "label": "A1",
+          "form": "allein",
+          "text": "a) Wähle eines der Diagramme aus dieser Stunde.\nb) Schreibe eine Einleitung: Thema, Diagrammtyp, Quelle und Jahr.\nc) Beschreibe die zwei wichtigsten Ergebnisse mit Zahlen."
+        },
+        {
+          "label": "A2",
+          "form": "zu zweit",
+          "text": "Tauscht eure Texte. Prüft: Sind alle fünf Angaben enthalten? Steht irgendwo eine Meinung statt einer Beschreibung?"
+        }
+      ],
+      "note": "Tippe auf „Ich bin fertig“, sobald du beide Aufträge erledigt hast.",
+      "graphic": {
+        "src": "lib:stift",
+        "pos": "right",
+        "size": "m"
+      }
+    },
+    {
+      "id": "s-tricks",
+      "section": "S-umfragen",
+      "type": "info",
+      "title": "Mit Zahlen und Diagrammen beeinflussen",
+      "cards": [
+        {
+          "title": "Zahlen wirken objektiv",
+          "text": "Zahlen gelten als sachlich und überprüfbar. Trotzdem kann man mit ihnen die Meinung lenken."
+        },
+        {
+          "title": "Trick 1: Ausschnitt wählen",
+          "text": "Welche Jahre zeige ich? Wo beginnt die y-Achse? So wirken Unterschiede größer oder kleiner."
+        },
+        {
+          "title": "Trick 2: Lücken verstecken",
+          "text": "Fehlen Jahre auf der x-Achse, wirkt eine Entwicklung steiler oder flacher, als sie ist."
+        },
+        {
+          "title": "Trick 3: Farben",
+          "text": "Rot wirkt alarmierend, Grün beruhigend – bei denselben Zahlen."
+        }
+      ],
+      "graphic": {
+        "src": "lib:achtung",
+        "pos": "corner",
+        "size": "m"
+      }
+    },
+    {
+      "id": "s-labor",
+      "section": "S-umfragen",
+      "type": "lab",
+      "title": "Das Manipulations-Labor",
+      "chart": {
+        "type": "bar",
+        "title": "Getötete im Straßenverkehr in Österreich",
+        "labels": [
+          "2019",
+          "2020",
+          "2021",
+          "2022",
+          "2023",
+          "2024",
+          "2025"
+        ],
+        "series": [
+          {
+            "name": "Getötete",
+            "values": [
+              416,
+              344,
+              362,
+              370,
+              402,
+              351,
+              403
+            ]
+          }
+        ],
+        "source": "Quelle: Statistik Austria, Statistik der Straßenverkehrsunfälle 2025 (STATkompakt, 2026)."
+      },
+      "task": "Stellt zuerst ein möglichst alarmierendes, dann ein beruhigendes Diagramm ein. Die Zahlen bleiben gleich – was habt ihr verändert?",
+      "source": "Quelle: Statistik Austria, Statistik der Straßenverkehrsunfälle 2025 (STATkompakt, 2026)."
+    },
+    {
+      "id": "s-schlaf",
+      "section": "S-umfragen",
+      "type": "poll",
+      "title": "Wie lange schläfst du vor einem Schultag?",
+      "hint": "Jede Person hat genau eine Stimme. Die Abstimmung ist anonym.",
+      "options": [
+        "weniger als 7 Stunden",
+        "7 bis 8 Stunden",
+        "8 bis 9 Stunden",
+        "mehr als 9 Stunden"
+      ],
+      "multi": false,
+      "discussion": "Schaltet „y-Achse kürzen“ ein: Welche Unterschiede wirken jetzt dramatisch? Eine Zeitung titelt: „Österreichs Jugend schläft viel zu wenig!“ – Darf man das aus einer Klassenumfrage schließen?"
+    },
+    {
+      "id": "s-scooter",
+      "section": "S-umfragen",
+      "type": "mc",
+      "title": "Genau hinschauen: E-Scooter-Unfälle",
+      "question": "Was muss man bei diesem Diagramm besonders beachten?",
+      "options": [
+        {
+          "text": "Die Werte sind in Prozent angegeben.",
+          "correct": false
+        },
+        {
+          "text": "Auf der x-Achse fehlen die Jahre 2020 bis 2022 – die Abstände zwischen den Säulen sind nicht gleich.",
+          "correct": true
+        },
+        {
+          "text": "Die y-Achse beginnt nicht bei null.",
+          "correct": false
+        },
+        {
+          "text": "Es fehlt die Quelle.",
+          "correct": false
+        }
+      ],
+      "explanation": "Zwischen der ersten und der zweiten Säule liegen vier Jahre, danach jeweils eines. Der Anstieg ist echt (rund 8,5-mal so viele Verletzte wie 2019), wirkt durch die Lücke aber noch sprunghafter.",
+      "chart": {
+        "type": "bar",
+        "title": "Im Spital behandelte Verletzte nach E-Scooter-Unfällen in Österreich",
+        "labels": [
+          "2019",
+          "2023",
+          "2024",
+          "2025"
+        ],
+        "series": [
+          {
+            "name": "Verletzte",
+            "values": [
+              1200,
+              6000,
+              7500,
+              10200
+            ]
+          }
+        ],
+        "source": "Quelle: KFV (Kuratorium für Verkehrssicherheit), IDB Austria, Hochrechnung. Achtung: 2020–2022 fehlen in dieser Darstellung."
+      }
+    },
+    {
+      "id": "s-quellen-vergleich",
+      "section": "S-umfragen",
+      "type": "info",
+      "title": "Zwei Quellen, zwei Zahlen?",
+      "cards": [
+        {
+          "title": "397 oder 403?",
+          "text": "Für 2025 meldete das Innenministerium zu Jahresbeginn 397 Verkehrstote. Statistik Austria weist später 403 aus."
+        },
+        {
+          "title": "Warum?",
+          "text": "Die erste Zahl ist eine vorläufige Bilanz. In der endgültigen Statistik zählen auch Menschen, die innerhalb von 30 Tagen an den Unfallfolgen sterben."
+        },
+        {
+          "title": "Merke",
+          "text": "Nennt in jeder Diagrammbeschreibung, wer die Daten wann erhoben hat. Nur so sind Zahlen überprüfbar."
+        }
+      ],
+      "source": "Quellen: ORF.at (vorläufige Bilanz des Innenministeriums, Jänner 2026); Statistik Austria, STATkompakt Straßenverkehrsunfälle 2025.",
+      "graphic": {
+        "src": "lib:kreis",
+        "pos": "right",
+        "size": "s"
+      }
+    },
+    {
+      "id": "s-split",
+      "section": "S-umfragen",
+      "type": "poll",
+      "title": "Handys in der Pause",
+      "hint": "Jede Person hat genau eine Stimme. Die Abstimmung ist anonym.",
+      "options": [
+        "ja",
+        "nein",
+        "weiß nicht"
+      ],
+      "multi": false,
+      "splitA": "Sollen Handys in der Pause erlaubt sein?",
+      "splitB": "Fachleute warnen, dass Handys in der Pause Gespräche und Bewegung verdrängen. Sollen Handys in der Pause trotzdem erlaubt sein?",
+      "splitLabelA": "Frage A (neutral)",
+      "splitLabelB": "Frage B (mit Einleitung)",
+      "discussion": "Die Hälfte der Klasse hat Frage A bekommen, die andere Hälfte Frage B – ohne es zu wissen. Schaltet „Gruppen vergleichen“ ein: Wie hat der einleitende Satz die Antworten beeinflusst?",
+      "notes": "Erst nach der Abstimmung verraten, dass es zwei Fassungen der Frage gab."
+    },
+    {
+      "id": "s-hue",
+      "section": "S-umfragen",
+      "type": "poll",
+      "title": "Wie findest du Hausübungen?",
+      "hint": "Jede Person hat genau eine Stimme. Die Abstimmung ist anonym.",
+      "options": [
+        "sehr sinnvoll",
+        "sinnvoll",
+        "eher sinnvoll",
+        "unnötig"
+      ],
+      "multi": false,
+      "discussion": "Zählt zusammen: Wie viel Prozent haben „sinnvoll“ in irgendeiner Form gewählt? Was ist an den Antwortmöglichkeiten unfair? Wie würden ausgewogene Antworten lauten?"
+    },
+    {
+      "id": "s-umfragetricks",
+      "section": "S-umfragen",
+      "type": "info",
+      "title": "Auch Umfragen können beeinflussen",
+      "cards": [
+        {
+          "title": "Suggestivfrage",
+          "text": "Die Frage legt eine Antwort nahe.\n„Findest du nicht auch, dass …?“\nSchon ein einleitender Satz verschiebt das Ergebnis."
+        },
+        {
+          "title": "Unausgewogene Antworten",
+          "text": "Mehr positive als negative Möglichkeiten:\nsehr gut · gut · eher gut · schlecht\nSo landen fast alle im „guten“ Bereich."
+        },
+        {
+          "title": "Wer wurde gefragt?",
+          "text": "Eine Klasse ist nicht „die Jugend“.\nWenige oder einseitig ausgewählte Befragte erlauben keine allgemeinen Aussagen."
+        },
+        {
+          "title": "Geschickt zusammenfassen",
+          "text": "Aus „eher sinnvoll“ wird schnell „sinnvoll“.\nPrüft, welche Antworten zusammengezählt wurden."
+        }
+      ],
+      "graphic": {
+        "src": "lib:frage",
+        "pos": "corner",
+        "size": "m"
+      }
+    },
+    {
+      "id": "s-schlagzeile",
+      "section": "S-umfragen",
+      "type": "open",
+      "title": "Schreib eine übertriebene Schlagzeile!",
+      "question": "Erfinde eine reißerische Schlagzeile zu unserem Ergebnis „Wie lange schläfst du?“.",
+      "maxLength": 120,
+      "maxAnswers": 2,
+      "approval": true,
+      "discussion": "Welche Schlagzeile übertreibt am meisten? Wie würde eine sachliche Schlagzeile lauten?",
+      "notes": "Antworten erscheinen erst nach Freigabe. Im Moderationsfenster lassen sie sich einzeln freigeben oder ausblenden."
+    },
+    {
+      "id": "s-quiz1",
+      "section": "S-quiz",
+      "type": "quiz",
+      "title": "Quiz 1",
+      "question": "Was bewirkt eine y-Achse, die nicht bei null beginnt?",
+      "options": [
+        {
+          "text": "Unterschiede wirken größer, als sie sind.",
+          "correct": true
+        },
+        {
+          "text": "Die Werte werden genauer.",
+          "correct": false
+        },
+        {
+          "text": "Es werden mehr Daten gezeigt.",
+          "correct": false
+        },
+        {
+          "text": "Die Quelle ändert sich.",
+          "correct": false
+        }
+      ],
+      "time": 20,
+      "points": 1000
+    },
+    {
+      "id": "s-quiz2",
+      "section": "S-quiz",
+      "type": "quiz",
+      "title": "Quiz 2",
+      "question": "Ein Wert sinkt von 74 % auf 65 %. Um wie viel ist er gesunken?",
+      "options": [
+        {
+          "text": "um 9 Prozent",
+          "correct": false
+        },
+        {
+          "text": "um 9 Prozentpunkte",
+          "correct": true
+        },
+        {
+          "text": "um 12 Prozentpunkte",
+          "correct": false
+        },
+        {
+          "text": "um 65 Prozent",
+          "correct": false
+        }
+      ],
+      "time": 20,
+      "points": 1000,
+      "explanation": "74 minus 65 ergibt 9 Prozentpunkte. Im Verhältnis zum alten Wert sind das rund 12 Prozent."
+    },
+    {
+      "id": "s-quiz3",
+      "section": "S-quiz",
+      "type": "quiz",
+      "title": "Quiz 3",
+      "question": "Welche Frage ist neutral formuliert?",
+      "options": [
+        {
+          "text": "Wie oft benutzt du dein Handy in der Pause?",
+          "correct": true
+        },
+        {
+          "text": "Findest du nicht auch, dass Handys stören?",
+          "correct": false
+        },
+        {
+          "text": "Fachleute warnen vor Handys. Benutzt du es trotzdem?",
+          "correct": false
+        },
+        {
+          "text": "Wie sehr nervt dich das Handyverbot?",
+          "correct": false
+        }
+      ],
+      "time": 25,
+      "points": 1000
+    },
+    {
+      "id": "s-quiz4",
+      "section": "S-quiz",
+      "type": "quiz",
+      "title": "Quiz 4",
+      "question": "Welcher Diagrammtyp zeigt Anteile an einem Ganzen am besten?",
+      "options": [
+        {
+          "text": "Kreisdiagramm",
+          "correct": true
+        },
+        {
+          "text": "Liniendiagramm",
+          "correct": false
+        },
+        {
+          "text": "Säulendiagramm mit gekürzter Achse",
+          "correct": false
+        }
+      ],
+      "time": 15,
+      "points": 1000
+    },
+    {
+      "id": "s-rangliste",
+      "section": "S-quiz",
+      "type": "leaderboard",
+      "title": "Rangliste",
+      "top": 5
+    },
+    {
+      "id": "s-merke",
+      "section": "S-quiz",
+      "type": "summary",
+      "title": "Das nehmen wir mit",
+      "items": [
+        {
+          "icon": "search",
+          "title": "Genau lesen",
+          "text": "Thema, Kategorien, Einheit, Legende, Quelle",
+          "section": "Diagramme lesen"
+        },
+        {
+          "icon": "calc",
+          "title": "Prozentpunkte",
+          "text": "Der Unterschied zwischen zwei Prozentwerten"
+        },
+        {
+          "icon": "eye",
+          "title": "Achsen prüfen",
+          "text": "Beginnt die y-Achse bei null? Fehlen Jahre?",
+          "section": "Umfragen durchschauen"
+        },
+        {
+          "icon": "vote",
+          "title": "Fragen prüfen",
+          "text": "Suggestivfragen und unausgewogene Antworten erkennen"
+        },
+        {
+          "icon": "users",
+          "title": "Wer wurde gefragt?",
+          "text": "Eine Klasse ist nicht „die Jugend“"
+        },
+        {
+          "icon": "pen",
+          "title": "Sachlich beschreiben",
+          "text": "Zahlen nennen, keine Meinung im Hauptteil"
+        }
+      ],
+      "graphic": {
+        "src": "lib:pokal",
+        "pos": "corner",
+        "size": "m"
+      }
+    },
+    {
+      "id": "s-skala-nachher",
+      "section": "S-quiz",
+      "type": "scale",
+      "title": "Und jetzt?",
+      "question": "Schätze dich noch einmal ein – vergleicht mit dem Anfang der Stunde.",
+      "statements": [
+        "Ich kann ein Diagramm genau lesen.",
+        "Ich erkenne, wenn ein Diagramm übertreibt.",
+        "Ich kann ein Diagramm mit eigenen Worten beschreiben."
+      ],
+      "steps": 5,
+      "minLabel": "gar nicht",
+      "maxLabel": "sehr sicher"
+    },
+    {
+      "id": "s-quellen",
+      "section": "S-quiz",
+      "type": "sources",
+      "title": "Quellen der Daten",
+      "intro": "Alle Daten wurden im November 2026 abgerufen.",
+      "items": [
+        {
+          "title": "Jugend-Internet-Monitor 2026 (Saferinternet.at / Institut für Jugendkulturforschung), Infografik",
+          "url": "https://www.saferinternet.at/fileadmin/redakteure/Services/Jugend-Internet-Monitor/Jugend-Internet-Monitor-2026.pdf"
+        },
+        {
+          "title": "Leadersnet, 26.1.2026: Zusammenfassung des Jugend-Internet-Monitors 2026 (Geschlechtervergleich)",
+          "url": "https://www.leadersnet.at/news/96648,welche-social-media-plattformen-bei-jugendliche-angesagt-sind.html"
+        },
+        {
+          "title": "Statistik Austria: STATkompakt Straßenverkehrsunfälle 2025",
+          "url": "https://www.statistik.at/fileadmin/publications/STATkompakt_UDM_2025.pdf"
+        },
+        {
+          "title": "ORF.at: 397 Verkehrstote laut Innenministerium (vorläufige Bilanz 2025)",
+          "url": "https://orf.at/stories/3415902/"
+        },
+        {
+          "title": "KFV zu E-Scooter-Unfällen (10.200 Verletzte 2025), Bericht vol.at",
+          "url": "https://www.vol.at/e-scooter-unfaelle-alarmierende-entwicklung-der-unfallzahlen/10544375"
+        },
+        {
+          "title": "ORF.at: E-Scooter-Verletzte 2023 (6.000, KFV)",
+          "url": "https://orf.at/stories/3354273/"
+        },
+        {
+          "title": "Umweltbundesamt Österreich: Emissionskennzahlen Verkehrsmittel (Stand Mai 2026)",
+          "url": "https://www.umweltbundesamt.at/fileadmin/site/themen/mobilitaet/daten/ekz_pkm_verkehrsmittel.pdf"
+        }
+      ],
+      "graphic": {
+        "src": "lib:buch",
+        "pos": "corner",
+        "size": "s"
+      }
+    }
+  ],
+  "theme": "standard"
+}

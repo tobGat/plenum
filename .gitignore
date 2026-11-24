@@ -1,0 +1,8 @@
+node_modules/
+dist/
+# private Lektionen (z. B. mit Schulbuch-Aufgaben) – nicht veröffentlichen
+privat/
+*.log
+dist-site/
+# SSH-Ziel für das Ausliefern der Website
+website/.stage-host

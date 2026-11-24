@@ -1,0 +1,30 @@
+# Plenum – Infoseite zur Windows-App (statisch, kein Node, kein pm2).
+# Quelle: Plenum-Projekt, website/ (npm run build:site). Angelegt von website/deploy-plenum-site.sh.
+# Nicht Teil der schulapps-Vorlagen (infra/nginx/templates) – schulapps-apply-nginx fasst diese Site nicht an.
+# Protokoll ohne Parameter und Referer: access_log … schulapps_privacy (Format in /etc/nginx/conf.d/schulapps-log.conf).
+# HTTPS (listen 443, Zertifikat, Umleitung von 80) ergänzt certbot --nginx.
+server {
+    server_name plenum.schulapps.at;
+    access_log /var/log/nginx/access.log schulapps_privacy;
+
+    root /var/www/plenum;
+    index index.html;
+
+    location /.well-known/acme-challenge/ { root /var/www/landing; }
+
+    # Screenshots, Logo und Schriften
+    location ~ ^/(img|fonts)/ {
+        expires 7d;
+        include snippets/security-headers-default.conf;
+    }
+
+    # /datenschutz und /datenschutz.html funktionieren beide
+    location / {
+        try_files $uri $uri.html $uri/ =404;
+    }
+
+    error_page 404 /404.html;
+
+    include snippets/security-headers-default.conf;
+    include snippets/schulapps-deny.conf;
+}

@@ -1,0 +1,109 @@
+{
+  "name": "plenum",
+  "productName": "Plenum",
+  "version": "1.0.0",
+  "description": "Interaktiv durch den Unterricht: Folien, Aufgaben, Umfragen, Wortwolken und Quiz – die Klasse macht im lokalen Netz mit.",
+  "author": "Tobias Gatterbauer",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "main": "main/main.js",
+  "scripts": {
+    "start": "node main/launch.cjs",
+    "test": "node --test \"test/*.test.js\"",
+    "test:ui": "node main/launch.cjs test/ui/run.mjs && node main/launch.cjs test/ui/editor.mjs && node main/launch.cjs test/ui/ai.mjs && node main/launch.cjs test/ui/library.mjs && node main/launch.cjs test/ui/states.mjs",
+    "assets": "node main/launch.cjs scripts/gen-assets.cjs",
+    "notices": "node scripts/notices.cjs",
+    "build:store": "node scripts/build-store.cjs",
+    "og:site": "node main/launch.cjs website/og.mjs",
+    "build:site": "node website/build.mjs",
+    "stage:site": "node website/build.mjs && node website/stage.mjs"
+  },
+  "dependencies": {
+    "compression": "1.8.2",
+    "express": "4.22.3",
+    "json5": "2.2.3",
+    "qrcode": "1.5.4",
+    "socket.io": "4.8.4"
+  },
+  "devDependencies": {
+    "electron": "45.2.3",
+    "electron-builder": "26.18.1",
+    "socket.io-client": "4.8.1"
+  },
+  "homepage": "https://github.com/tobGat/plenum",
+  "build": {
+    "appId": "at.tobgat.plenum",
+    "productName": "Plenum",
+    "copyright": "© 2026 Tobias Gatterbauer",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main/**/*",
+      "server/**/*",
+      "shared/**/*",
+      "public/**/*",
+      "samples/**/*",
+      "build/icon.ico",
+      "package.json",
+      "LICENSE",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "LICENSE",
+        "to": "LICENSE"
+      },
+      {
+        "from": "THIRD-PARTY-NOTICES.txt",
+        "to": "THIRD-PARTY-NOTICES.txt"
+      }
+    ],
+    "asar": true,
+    "npmRebuild": false,
+    "fileAssociations": [
+      {
+        "ext": "plenum",
+        "name": "Plenum-Lektion",
+        "description": "Plenum-Lektion",
+        "icon": "build/icon.ico"
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "appx",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "appx": {
+      "identityName": "tobGat.Plenum",
+      "publisher": "CN=0C5A2E0E-4361-400B-B114-BF0C3369C879",
+      "publisherDisplayName": "tobGat",
+      "applicationId": "Plenum",
+      "displayName": "Plenum",
+      "backgroundColor": "#4f46e5",
+      "languages": [
+        "de-DE"
+      ],
+      "showNameOnTiles": true,
+      "setBuildNumber": false,
+      "capabilities": [
+        "privateNetworkClientServer"
+      ],
+      "minVersion": "10.0.17763.0",
+      "maxVersionTested": "10.0.26100.0",
+      "customManifestPath": "build/appxmanifest.xml",
+      "artifactName": "${productName} ${version}.${ext}"
+    },
+    "electronLanguages": [
+      "de",
+      "en-US"
+    ]
+  }
+}
