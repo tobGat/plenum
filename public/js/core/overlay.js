@@ -16,7 +16,11 @@ export const ovOpen = () => !!document.getElementById('ov').innerHTML;
 
 export function initOverlay() {
   const ov = document.getElementById('ov');
-  ov.addEventListener('click', (e) => { if (e.target.classList.contains('ov') && e.target.dataset.ovbg) closeOv(); });
+  // Nur schließen, wenn der Klick auch auf dem Hintergrund begonnen hat – sonst schließt das Markieren von Text
+  // in einem Feld den Dialog, sobald die Maus außerhalb losgelassen wird.
+  let downOnBg = false;
+  ov.addEventListener('mousedown', (e) => { downOnBg = e.target.classList.contains('ov'); });
+  ov.addEventListener('click', (e) => { const ok = downOnBg; downOnBg = false; if (ok && e.target.classList.contains('ov') && e.target.dataset.ovbg) closeOv(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && ov.querySelector('[data-ovbg="1"]')) closeOv(); });
 }
 
