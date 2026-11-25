@@ -15,23 +15,29 @@ html,body{width:1200px;height:630px;overflow:hidden}
 body{font-family:Inter,sans-serif;color:#fff;position:relative;
   background:radial-gradient(900px 520px at 88% 8%,#7c6cf5 0,transparent 60%),radial-gradient(700px 500px at 0 100%,#0d9488 0,transparent 62%),linear-gradient(135deg,#312e81,#4338ca 55%,#4f46e5)}
 body::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.13) 1.5px,transparent 1.5px);background-size:26px 26px}
-.txt{position:absolute;left:64px;top:58px;width:520px}
+.txt{position:absolute;left:60px;top:54px;width:450px}
 .brand{display:flex;align-items:center;gap:16px;font:700 34px Lexend}
 .brand img{width:62px;height:62px;border-radius:16px;box-shadow:0 10px 24px -8px rgba(0,0,0,.5)}
-h1{font:800 66px/1.06 Lexend;letter-spacing:-.02em;margin-top:52px}
+h1{font:800 60px/1.07 Lexend;letter-spacing:-.02em;margin-top:58px}
 h1 em{font-style:normal;color:#a5f3fc}
-p{font:500 26px/1.4 Inter;color:#e0e7ff;margin-top:26px}
+p{font:500 25px/1.4 Inter;color:#e0e7ff;margin-top:24px}
 .tags{display:flex;gap:10px;margin-top:34px}
-.tags span{font:600 19px Lexend;padding:9px 16px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28)}
-.shot{position:absolute;left:630px;top:112px;width:640px;border-radius:18px;overflow:hidden;box-shadow:0 40px 70px -24px rgba(2,6,23,.75);border:1px solid rgba(255,255,255,.35);transform:rotate(-2deg)}
-.shot img,.tab img{display:block;width:100%}
-.tab{position:absolute;left:770px;top:368px;width:330px;border:10px solid #0b1220;border-radius:22px;overflow:hidden;background:#0b1220;box-shadow:0 34px 50px -20px rgba(2,6,23,.8);transform:rotate(4deg)}
+.tags span{font:600 18px Lexend;padding:8px 15px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28)}
+/* Geräte der Klasse: Laptop mit Aufgabe, davor ein Tablet mit Umfrage */
+.glow{position:absolute;left:560px;top:90px;width:620px;height:460px;border-radius:50%;background:radial-gradient(closest-side,rgba(165,243,252,.34),transparent);filter:blur(10px)}
+.laptop{position:absolute;left:548px;top:112px;width:600px}
+.lscreen{border:11px solid #0b1220;border-bottom-width:13px;border-radius:20px 20px 0 0;overflow:hidden;background:#0b1220;box-shadow:0 0 0 1.5px rgba(255,255,255,.22)}
+.lbase{height:17px;margin:0 -44px;border-radius:0 0 18px 18px;background:linear-gradient(#e5e7eb,#9ca3af);box-shadow:0 30px 44px -16px rgba(2,6,23,.75)}
+.lbase::before{content:"";display:block;width:96px;height:6px;margin:0 auto;border-radius:0 0 8px 8px;background:#6b7280;opacity:.55}
+.tab{position:absolute;left:868px;top:318px;width:306px;border:10px solid #0b1220;border-radius:24px;overflow:hidden;background:#0b1220;box-shadow:0 0 0 1.5px rgba(255,255,255,.25),0 34px 50px -18px rgba(2,6,23,.85);transform:rotate(4deg)}
+.lscreen img,.tab img{display:block;width:100%}
 </style>
 <div class="txt"><div class="brand"><img src="${u('website/img/icon.png')}" alt="">Plenum</div>
-<h1>Unterricht, bei dem <em>alle mitmachen</em></h1>
-<p>Folien, Umfragen, Wortwolken und Quiz – live am Beamer und auf den Geräten der Klasse.</p>
-<div class="tags"><span>Ohne Konto</span><span>Ohne Cloud</span><span>Für Windows</span></div></div>
-<div class="shot"><img src="${u('website/img/umfrage.png')}" alt=""></div>
+<h1>Mach deine Klasse zum <em>Plenum.</em></h1>
+<p>Umfragen, Quiz und Aufgaben – live am Beamer, Laptop und iPad.</p>
+<div class="tags"><span>Ohne Konto</span><span>Ohne Cloud</span><span>Kostenlos</span></div></div>
+<div class="glow"></div>
+<div class="laptop"><div class="lscreen"><img src="${u('website/img/laptop-aufgabe.png')}" alt=""></div><div class="lbase"></div></div>
 <div class="tab"><img src="${u('website/img/tablet-umfrage.png')}" alt=""></div>`;
 
 app.disableHardwareAcceleration();

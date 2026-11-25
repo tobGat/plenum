@@ -80,22 +80,10 @@ Einreichung braucht eine **höhere** Version als die zuletzt veröffentlichte �
    - Kein Chat mit Fremden, keine Standortweitergabe, keine Käufe, keine Werbung.
 5. **Store-Eintrag** (Deutsch): Texte aus [STORE-LISTING.md](STORE-LISTING.md), mindestens ein
    Screenshot (1366 × 768 oder größer), Store-Logo `build/store-logo-300.png`.
-6. **Datenschutzrichtlinie (URL):** z. B. `https://github.com/tobGat/plenum/blob/main/PRIVACY.md`
-   (Repository anlegen und `PRIVACY.md` veröffentlichen) – Inhalt identisch mit der Seite
-   „Datenschutz“ in der App.
-7. **Anmerkungen für die Zertifizierung** (Feld „Notes for certification“):
-
-   > Plenum is a classroom presentation tool. The teacher's PC runs a small local web server
-   > (ports 3080–3089) so that students' phones in the same network can take part in polls and
-   > quizzes. No account, no internet connection and no second device are required for testing:
-   > 1) Start Plenum – a sample lesson is included. 2) Click „Präsentieren“. 3) Click
-   > „Beitreten“ and then „Schüleransicht testen“ (or open http://localhost:3080 in Edge) to
-   > join as a student and answer the poll and quiz slides.
-   > runFullTrust: Plenum is a packaged Electron desktop application; runFullTrust
-   > (Windows.FullTrustApplication) is technically required to run it, to host the local
-   > classroom server and to read/write lesson files (.plenum) in the user's Documents folder.
-   > privateNetworkClientServer and the package firewall rule allow devices in the local network
-   > to connect. No data is sent to the developer or any third party.
+6. **Datenschutzrichtlinie (URL):** `https://plenum.schulapps.at/datenschutz.html` – Inhalt identisch mit der
+   Seite „Datenschutz“ in der App. Website: `https://plenum.schulapps.at`.
+7. **Anmerkungen für die Zertifizierung** (Feld „Notes for certification“): englischer Text aus
+   [STORE-LISTING.md](STORE-LISTING.md), Abschnitt „Hinweise für die Zertifizierung“.
 
 8. **Preis & Verfügbarkeit:** kostenlos.
    **Erst-Test:** unter *Sichtbarkeit* „**Privates Publikum**“ (eigene Microsoft-Konto-Adresse)
@@ -106,7 +94,7 @@ Einreichung braucht eine **höhere** Version als die zuletzt veröffentlichte �
 ### Testliste nach der Installation aus dem Store
 
 - [ ] Start ohne Firewall-Rückfrage; Beispiellektion vorhanden (Ordner *Dokumente\Plenum-Lektionen*).
-- [ ] Beitritt mit einem Handy im selben WLAN über Link **und** QR-Code.
+- [ ] Beitritt mit einem Laptop und einem Tablet im selben WLAN über Link **und** QR-Code.
 - [ ] Doppelklick auf eine `.plenum`-Datei öffnet/importiert sie.
 - [ ] Ein älteres iPad/Android-Gerät: Umfrage, Wortwolke, Quiz.
 - [ ] Prüfen, ob Chrome auf Android bei `http://192.168…` eine HTTPS-Warnung zeigt.

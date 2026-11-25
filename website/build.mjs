@@ -55,16 +55,16 @@ function layout({ title, description, path, body }) {
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${description}">
 <meta property="og:url" content="${SITE}${path}">
-<meta property="og:image" content="${SITE}/img/og.jpg">
-<meta property="og:image:secure_url" content="${SITE}/img/og.jpg">
+<meta property="og:image" content="${SITE}/img/og.jpg?v=4">
+<meta property="og:image:secure_url" content="${SITE}/img/og.jpg?v=4">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Plenum – Unterricht, bei dem alle mitmachen: Umfrage am Beamer und auf einem Tablet">
+<meta property="og:image:alt" content="Plenum – Mach deine Klasse zum Plenum: Aufgabe auf einem Laptop und Umfrage auf einem Tablet">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${title}">
 <meta name="twitter:description" content="${description}">
-<meta name="twitter:image" content="${SITE}/img/og.jpg">
+<meta name="twitter:image" content="${SITE}/img/og.jpg?v=4">
 <meta name="theme-color" content="#4f46e5">
 <link rel="icon" type="image/png" href="/img/icon.png">
 <link rel="stylesheet" href="/style.css">
@@ -117,7 +117,7 @@ const policy = appPolicy.replace('# Datenschutzrichtlinie – Plenum', '# Datens
 
 const pages = {
   'index.html': layout({
-    title: 'Plenum – Unterricht, bei dem alle mitmachen',
+    title: 'Plenum – Mach deine Klasse zum Plenum',
     description: 'Bald im Microsoft Store: Plenum führt Schritt für Schritt durch die Stunde. Du präsentierst am Beamer, alle Schüler:innen antworten auf ihren Laptops oder iPads – und du siehst sofort, wo die Klasse steht. Ohne Konto, ohne Cloud.',
     path: '/',
     body: read('website/pages/index.html').replaceAll('{{STORE_BUTTON}}', storeButton),

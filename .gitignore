@@ -6,3 +6,5 @@ privat/
 dist-site/
 # SSH-Ziel für das Ausliefern der Website
 website/.stage-host
+# Bildschirmfotos (lassen sich jederzeit neu erzeugen)
+screenshots/

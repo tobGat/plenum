@@ -1,9 +1,13 @@
 // Darstellung: Umfrage (inkl. Split, y-Achse kürzen), Skala, Wortwolke, offene Antworten
 import { html, raw, md, fmt } from '../core/dom.js';
+import { CHART_COLORS } from '/shared/palette.js';
 import { ic } from '../core/icons.js';
 import { fb, ring, seg, srcLine } from '../core/parts.js';
 import { svgBar, svgHBar, svgPie } from '../charts.js';
 import { cloudSvg, snapCloud, flipCloud } from '../wordcloud.js';
+
+// Zweite Datenreihe (Vergleichswerte, Frage A): kräftige Kontrastfarbe statt Grau – Orange, bei warmen Abschnittsfarben Blau
+const cmpColor = (hex) => { const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || '')); if (!m) return '#f97316'; const r = parseInt(m[1], 16), b = parseInt(m[3], 16); return r > 150 && r > b ? '#2563eb' : '#f97316'; };
 
 const setAction = { set(el, c) { const k = el.dataset.k, v = el.dataset.v; c.prefs[k] = v === 'toggle' ? !c.prefs[k] : v; c.render(); } };
 const discussion = (s, i = 4) => (s.discussion ? html`<div class="hint anim" style="--i:${i}">${ic('chat')}<span>${s.discussion}</span></div>` : '');
@@ -17,8 +21,9 @@ export const poll = {
     const pctOf = (X, i) => (X.n ? Math.round(((X.counts[i] || 0) / X.n) * 1000) / 10 : 0);
     let type = v.type; if (s.multi && type === 'pie') type = 'hbar'; if (rev && type === 'pie') type = 'bar';
     let series = [{ name: 'Unsere Klasse', values: vals, color: c.sec.c }];
-    if (rev) series = [{ name: `${s.splitLabelA || 'Frage A'} · ${A.n} Befragte`, values: s.options.map((_, i) => pctOf(A, i)), color: '#94a3b8' }, { name: `${s.splitLabelB || 'Frage B'} · ${B.n} Befragte`, values: s.options.map((_, i) => pctOf(B, i)), color: c.sec.c }];
-    else if (s.compareValues && v.cmp && canPct) series.push({ name: s.compareName || 'Vergleich', values: s.compareValues, color: '#94a3b8' });
+    if (rev) series = [{ name: `${s.splitLabelA || 'Frage A'} · ${A.n} Befragte`, values: s.options.map((_, i) => pctOf(A, i)), color: cmpColor(c.sec.c) }, { name: `${s.splitLabelB || 'Frage B'} · ${B.n} Befragte`, values: s.options.map((_, i) => pctOf(B, i)), color: c.sec.c }];
+    else if (s.compareValues && v.cmp && canPct) series.push({ name: s.compareName || 'Vergleich', values: s.compareValues, color: cmpColor(c.sec.c) });
+    if (series.length === 1) series[0].colors = s.options.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]);
     const canCut = type === 'bar' && canPct; let ymin;
     if (canCut && v.cut) { const all = series.flatMap((x) => x.values), pos = all.filter((x) => x > 0), lo = pos.length ? Math.min(...pos) : 0, hi = Math.max(...all); if (hi > lo && lo > 0) ymin = lo >= 4 ? Math.floor(lo * 0.75) : +(lo * 0.75).toFixed(1); }
     const unit = usePct ? ' %' : '';
@@ -33,7 +38,7 @@ export const poll = {
       <div class="chartbox anim"><h4>${s.question || s.title}<span class="unit">${usePct ? (rev ? 'Angaben in % der jeweiligen Gruppe' : 'Angaben in %') : 'Anzahl der Stimmen'}</span>${ymin !== undefined ? html`<span class="unit cut">y-Achse beginnt bei ${fmt(ymin)}!</span>` : ''}</h4>${raw(chart)}
       <div class="src">Quelle: Abstimmung in unserer Klasse, ${new Date().toLocaleDateString('de-AT')}${s.multi ? ', Mehrfachnennung möglich' : ''}, ${base} Befragte.${rev ? ' Zwei Gruppen mit unterschiedlicher Fragestellung.' : ''}${s.compareValues && v.cmp && s.compareSource ? ` Vergleich: ${s.compareSource}` : ''}</div></div>`;
     let right = html`<div class="card part anim" style="--i:1">${ring(c.online ? base / c.online : base ? 1 : 0, `vt:${s.id}`, 78)}<div><div class="part-n">${base}<small> von ${c.online}</small></div><div class="part-l">haben abgestimmt</div></div></div>`;
-    if (rev) right = html`${right}${[['A', s.splitA, A, '#94a3b8', s.splitLabelA || 'Frage A'], ['B', s.splitB, B, c.sec.c, s.splitLabelB || 'Frage B']].map(([g, q, X, col, lab], j) => html`<div class="card qcmp anim" style="--i:${2 + j};--qc:${col}"><div class="qlab">${lab} · ${X.n} Befragte</div><p>„${q}“</p></div>`)}`;
+    if (rev) right = html`${right}${[['A', s.splitA, A, cmpColor(c.sec.c), s.splitLabelA || 'Frage A'], ['B', s.splitB, B, c.sec.c, s.splitLabelB || 'Frage B']].map(([g, q, X, col, lab], j) => html`<div class="card qcmp anim" style="--i:${2 + j};--qc:${col}"><div class="qlab">${lab} · ${X.n} Befragte</div><p>„${q}“</p></div>`)}`;
     else if (s.hint) right = html`${right}<div class="note anim" style="--i:2">${ic('vote')}<span>${s.hint}</span></div>`;
     if (s.multi) right = html`${right}<div class="note anim" style="--i:3">${ic('pie')}<span>Bei Mehrfachnennungen ergeben die Anteile zusammen mehr als 100 %. Deshalb ist hier kein Kreisdiagramm möglich.</span></div>`;
     if (!s.splitA || rev) right = html`${right}${discussion(s)}`;

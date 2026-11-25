@@ -5,7 +5,7 @@ import { sleep, makeWin, js, waitFor, mustClick, click, shot, startTestServer, f
 
 async function main() {
   const { srv, base } = await startTestServer(3240);
-  const host = makeWin(1280, 720, 'host', 'Beamer');
+  const host = makeWin(+(process.env.UI_W || 1280), +(process.env.UI_H || 720), 'host', 'Beamer');
   await host.loadURL(`${base}/host`);
   await waitFor(host, `document.querySelector('.lcard')`, 8000, 'Bibliothek');
   await mustClick(host, '[data-action="present"]', 'Präsentieren');

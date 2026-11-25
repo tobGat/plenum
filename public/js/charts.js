@@ -69,7 +69,7 @@ export function svgPie(o){const key=chartKey(o,'p'),fresh=!CH.prev[key];CH.prev[
  if(fresh){const id='pm'+(++CH.uid);s+=`<defs><mask id="${id}"><circle class="sweep" cx="${cx}" cy="${cy}" r="${rm}" fill="none" stroke="#fff" stroke-width="${r-ri+10}" pathLength="1" transform="rotate(-90 ${cx} ${cy})"/></mask></defs><g mask="url(#${id})">${g}</g>`}else s+=g;
  s+=`<g class="${fresh?'pfade':''}">${lab}</g><text class="ctr" x="${cx}" y="${cy+4}" text-anchor="middle">${fmt(tot)}</text><text class="ctl" x="${cx}" y="${cy+26}" text-anchor="middle">${esc(o.center||'gesamt')}</text>`;
  return s+pieLegend(o,tot,H)+'</svg>'}
-function pieLegend(o,tot,H){let s='';const top=H/2-o.labels.length*15+10;o.labels.forEach((l,i)=>{const y=top+i*30;s+=`<rect x="350" y="${y-12}" width="14" height="14" rx="4" fill="${CHART_COLORS[i%CHART_COLORS.length]}"/><text class="lg" x="374" y="${y}"><tspan font-weight="700" fill="#111827">${esc(l)}</tspan><tspan dx="8">${fmt(o.values[i])}${tot?` · ${fmt(o.values[i]/tot*100)} %`:''}</tspan></text>`});return s}
+function pieLegend(o,tot,H){let s='';const top=H/2-o.labels.length*15+10;o.labels.forEach((l,i)=>{const y=top+i*30;s+=`<rect x="350" y="${y-12}" width="14" height="14" rx="4" fill="${CHART_COLORS[i%CHART_COLORS.length]}"/><text class="lg" x="374" y="${y}"><tspan font-weight="700" style="fill:var(--ink,#111827)">${esc(l)}</tspan><tspan dx="8">${fmt(o.values[i])}${tot?` · ${fmt(o.values[i]/tot*100)} %`:''}</tspan></text>`});return s}
 
 // Liniendiagramm: Linie zeichnet sich, Punkte erscheinen nacheinander
 export function svgLine(o){const key=chartKey(o,'l'),fresh=!CH.prev[key];CH.prev[key]={on:1};
@@ -88,6 +88,7 @@ export function svgLine(o){const key=chartKey(o,'l'),fresh=!CH.prev[key];CH.prev
 export function chartFromSpec(spec, key, extra = {}) {
   if (!spec || !spec.labels || !spec.series) return "";
   const series = spec.series.map((s, j) => ({ name: s.name, values: s.values, color: s.color || CHART_COLORS[j % CHART_COLORS.length] }));
+  if (series.length === 1 && !spec.series[0].color && spec.type !== 'line') series[0].colors = spec.labels.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]);
   const o = { key, labels: spec.labels, series, unit: spec.unit ? (/^[%a-zA-Z€]/.test(spec.unit) ? " " + spec.unit : spec.unit) : "", ...extra };
   if (spec.type === "hbar") return svgHBar(o);
   if (spec.type === "pie") return svgPie({ key, labels: spec.labels, values: series[0].values, center: extra.center || "gesamt" });

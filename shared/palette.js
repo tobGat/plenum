@@ -20,4 +20,4 @@ export const ICON_NAMES = ['compass', 'book', 'bars', 'hbars', 'pie', 'line', 'e
   'target', 'heart', 'clock', 'spark', 'notebook', 'puzzle', 'flask', 'music', 'leaf', 'calc'];
 
 // Diagrammfarben (Reihen)
-export const CHART_COLORS = ['#2563eb', '#f97316', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#64748b'];
+export const CHART_COLORS = ['#2563eb', '#f97316', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#f59e0b', '#84cc16'];
