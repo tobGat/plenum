@@ -74,7 +74,7 @@ export const gap = {
 };
 
 export const lab = {
-  type: 'lab', label: 'Diagramm-Labor', icon: 'eye', group: 'Aufgaben',
+  type: 'lab', label: 'Diagramm-Labor', icon: 'eye', group: 'Live',
   desc: 'Säulendiagramm mit Reglern (y-Achse, erstes Jahr, Alarmfarbe): zeigt, wie Darstellungen beeinflussen. Braucht ein Diagramm mit einer Reihe.',
   fields: [F.title, { ...F.chart, optional: false, label: 'Daten (eine Reihe)' },
     { key: 'task', kind: 'textarea', label: 'Auftrag', max: 300, optional: true }, F.source, F.notes],
