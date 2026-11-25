@@ -54,12 +54,26 @@ export function exampleLesson(types) {
 }
 const stripType = (s) => { const { type, ...rest } = s; return rest; };
 
-const RULES = (n) => [
+// Umfang der Lektion: genaue Zahl, Bereich (von–bis) oder offen (die KI entscheidet nach Bedarf)
+export function scopeOf({ count = 12, countMode = 'exact', countMin, countMax } = {}) {
+  const lim = (v, d) => Math.max(3, Math.min(MAX_SLIDES, Math.round(+v) || d));
+  if (countMode === 'open') return { mode: 'open', short: `so viele Folien, wie das Thema sinnvoll braucht (höchstens ${MAX_SLIDES})`, rule: `Wähle die Anzahl der Folien passend zum Thema und zu einer Unterrichtsstunde – höchstens ${MAX_SLIDES} Folien.` };
+  if (countMode === 'range') {
+    let a = lim(countMin, 8), b = lim(countMax, 15);
+    if (a > b) [a, b] = [b, a];
+    if (a !== b) return { mode: 'range', min: a, max: b, short: `mindestens ${a} und höchstens ${b} Folien`, rule: `Mindestens ${a} und höchstens ${b} Folien.` };
+    count = a;
+  }
+  const n = lim(count, 12);
+  return { mode: 'exact', n, short: `genau ${n} Folien`, rule: `Genau ${n} Folien.` };
+}
+
+const RULES = (scope) => [
   'Antworte mit genau EINEM JSON-Codeblock (```json … ```). Davor oder danach höchstens ein kurzer Satz.',
   'Gültiges JSON: doppelte Anführungszeichen für Schlüssel und Texte, keine Kommentare, kein Komma nach dem letzten Eintrag.',
   'Keine Auslassungen wie „…“, „usw.“ oder „weitere Folien“: schreibe jede Folie vollständig aus.',
   'Anführungszeichen innerhalb von Texten nur als „…“ (deutsche Anführungszeichen), niemals als ".',
-  n ? `Genau ${n} Folien.` : `Höchstens ${MAX_SLIDES} Folien.`,
+  scope ? scope.rule : `Höchstens ${MAX_SLIDES} Folien.`,
   'Halte die angegebenen Längen ein (max. Zeichen bzw. Einträge). Kurze, klare Sätze, die man am Beamer gut lesen kann.',
   'Erfinde keine Zahlen, Statistiken, Zitate oder Quellen. Kennst du keine sicheren echten Daten, verwende plausible Beispielwerte und schreibe als Quelle genau "Beispieldaten (fiktiv)".',
   'Gliedere die Stunde in 2–5 Abschnitte („sections“) mit kurzen Namen. Jede Folie nennt in "section" den Namen ihres Abschnitts.',
@@ -86,9 +100,9 @@ function formatBlock(list) {
 }
 
 // Neue Lektion erstellen
-export function buildPrompt({ topic = '', subject = '', grade = '', count = 12, types = [], notes = '', material = null, materialUse = 'buch' } = {}) {
+export function buildPrompt({ topic = '', subject = '', grade = '', count = 12, countMode = 'exact', countMin, countMax, types = [], notes = '', material = null, materialUse = 'buch' } = {}) {
   // Mit Buch-/Arbeitsblatt-Material braucht es Arbeitsaufträge („Zuerst im Buch …“)
-  const list = pickTypes(material && materialUse !== 'orient' && types.length && !types.includes('task') ? [...types, 'task'] : types), n = Math.max(3, Math.min(MAX_SLIDES, Math.round(+count) || 12));
+  const list = pickTypes(material && materialUse !== 'orient' && types.length && !types.includes('task') ? [...types, 'task'] : types), scope = scopeOf({ count, countMode, countMin, countMax });
   const ex = exampleLesson(list);
   return [
     'Du bist eine erfahrene Lehrkraft und bereitest eine interaktive Unterrichtsstunde für die App „Plenum“ vor. Die Lehrkraft zeigt die Folien am Beamer, die Klasse macht auf Handys mit (Abstimmungen, Quiz, Aufgaben).',
@@ -96,12 +110,12 @@ export function buildPrompt({ topic = '', subject = '', grade = '', count = 12, 
     `THEMA: ${topic.trim() || (material ? 'siehe angehängtes Material' : '(bitte ergänzen)')}`,
     subject.trim() ? `FACH: ${subject.trim()}` : '',
     grade.trim() ? `ZIELGRUPPE / SCHULSTUFE: ${grade.trim()}` : '',
-    `UMFANG: genau ${n} Folien`,
+    `UMFANG: ${scope.short}`,
     notes.trim() ? `WÜNSCHE DER LEHRKRAFT: ${notes.trim()}` : '',
     materialBlock(material, materialUse),
     '',
     'REGELN:',
-    ...RULES(n).map((r, i) => `${i + 1}. ${r}`),
+    ...RULES(scope).map((r, i) => `${i + 1}. ${r}`),
     '',
     formatBlock(list),
     '',
@@ -142,10 +156,10 @@ export function buildRevisePrompt({ lesson, wish = '', types = [], material = nu
 }
 
 // Vorlage als Datei: leere Lektion mit Anleitung und je einer Musterfolie pro Typ – für Chatbots mit Datei-Upload
-export function templateJson({ types = [], count = 12, topic = '', material = null } = {}) {
+export function templateJson({ types = [], count = 12, countMode = 'exact', countMin, countMax, topic = '', material = null } = {}) {
   const ex = exampleLesson(types);
   return {
-    _anleitung: `Fülle diese Vorlage für eine Plenum-Unterrichtsstunde${topic ? ` zum Thema „${topic}“` : ''} mit genau ${count} Folien aus. ` +
+    _anleitung: `Fülle diese Vorlage für eine Plenum-Unterrichtsstunde${topic ? ` zum Thema „${topic}“` : ''} aus – Umfang: ${scopeOf({ count, countMode, countMin, countMax }).short}. ` +
       (material ? `Richte dich nach den weiteren angehängten Dateien${material.desc ? ` (${String(material.desc).trim()})` : ''}; Aufgaben aus dem Buch bekommen eine eigene Folie vom Typ "task". ` : '') +
       'Ersetze die Musterfolien durch eigene, verwende nur die vorkommenden Folientypen, halte das Format exakt ein und antworte mit einem einzigen JSON-Codeblock. ' +
       'Erfinde keine Zahlen oder Quellen – sonst als Quelle "Beispieldaten (fiktiv)". Anführungszeichen in Texten nur als „…“. Das Feld "_anleitung" weglassen.',

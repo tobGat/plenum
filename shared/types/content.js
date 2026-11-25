@@ -1,5 +1,5 @@
 // Inhaltsfolien ohne Antworten der Klasse: Titel, Info, Lückentext, Labor, Zusammenfassung, Quellen
-import { F } from './common.js';
+import { F, shuffled, fp } from './common.js';
 import { ICON_NAMES } from '../palette.js';
 
 const iconSelect = { key: 'icon', kind: 'select', label: 'Icon', options: ICON_NAMES.map((v) => ({ value: v, label: v })), default: 'star' };
@@ -34,18 +34,47 @@ export const info = {
   toStudent: (s) => ({ title: s.title, cards: s.cards, chart: s.chart, source: s.source }),
 };
 
+// Lücken eines Textes: je Lücke die Liste der gültigen Lösungen ([[Fahrrad|Rad]] → ['Fahrrad', 'Rad'])
+export const gapAlts = (text) => [...String(text || '').matchAll(/\[\[([^\]]+)\]\]/g)].map((m) => m[1].split('|').map((x) => x.trim()).filter(Boolean)).filter((x) => x.length);
+
 export const gap = {
-  type: 'gap', label: 'Lückentext', icon: 'pen', group: 'Aufgaben',
-  desc: 'Text mit Lücken in doppelten eckigen Klammern: „Die [[Sonne]] erwärmt das Wasser.“ Alternativen mit senkrechtem Strich: [[Fahrrad|Rad]]. Die Klasse deckt Lösungen auf und vergleicht (z. B. mit dem Heft).',
-  fields: [F.title, { key: 'tip', kind: 'text', label: 'Tipp / Wortkasten', max: 240, optional: true },
-    { key: 'text', kind: 'textarea', label: 'Text mit [[Lücken]]', max: 1400, required: true }, F.chart, F.source, F.notes],
-  sample: { type: 'gap', title: 'Lücken füllen', tip: 'Wortkasten: verdunstet · Wolken · Regen', text: 'Das Wasser [[verdunstet]]. Es bilden sich [[Wolken]]. Dann fällt [[Regen|Niederschlag]].' },
-  repair(s, r, p) { if (!/\[\[[^\]]+\]\]/.test(s.text || '')) r.error(`${p}: Lückentext ohne [[Lücken]]`); },
-  toStudent: (s) => ({ title: s.title, tip: s.tip, text: s.text, chart: s.chart, source: s.source }),
+  type: 'gap', label: 'Lückentext', icon: 'pen', group: 'Aufgaben', selfCheck: true,
+  desc: 'Text mit Lücken in doppelten eckigen Klammern: „Die [[Sonne]] erwärmt das Wasser.“ Alternativen mit senkrechtem Strich: [[Fahrrad|Rad]]. Die Klasse zieht die Wörter aus einem Wortkasten in die Lücken und prüft selbst; der Wortkasten entsteht automatisch aus den Lösungen (gemischt). „extra“ sind zusätzliche falsche Wörter im Wortkasten. Die Lösungswörter deshalb NICHT im Tipp nennen.',
+  fields: [F.title, { key: 'tip', kind: 'text', label: 'Tipp (optional)', max: 240, optional: true },
+    { key: 'text', kind: 'textarea', label: 'Text mit [[Lücken]]', max: 1400, required: true },
+    { key: 'extra', kind: 'strlist', label: 'Zusätzliche falsche Wörter im Wortkasten (optional)', max: 6, itemMax: 40, optional: true },
+    F.chart, F.source, F.notes],
+  sample: { type: 'gap', title: 'Lücken füllen', tip: 'Lies zuerst den ganzen Text.', text: 'Das Wasser [[verdunstet]]. Es bilden sich [[Wolken]]. Dann fällt [[Regen|Niederschlag]].', extra: ['Schnee'] },
+  repair(s, r, p) {
+    if (!gapAlts(s.text).length) r.error(`${p}: Lückentext ohne [[Lücken]]`);
+    if (gapAlts(s.text).length > 14) r.note(`${p}: sehr viele Lücken – eventuell unübersichtlich`);
+  },
+  // Wortkasten: erste Lösung jeder Lücke plus falsche Wörter, je Gerät anders gemischt
+  toStudent: (s, ctx) => ({ title: s.title, tip: s.tip, text: s.text, chart: s.chart, source: s.source, mine: ctx.mine ?? null,
+    bank: shuffled([...gapAlts(s.text).map((a) => a[0]), ...(s.extra || [])].map((text, id) => ({ id, text })), (ctx.cid || '') + s.id) }),
+  // Antwort: je Lücke das eingesetzte Wort (nur geprüfte, richtige Wörter bleiben stehen) oder null
+  accept(s, d) {
+    const n = gapAlts(s.text).length;
+    if (!d || !Array.isArray(d.answers) || d.answers.length !== n) return null;
+    return d.answers.map((a) => (typeof a === 'string' ? a.slice(0, 80) : null));
+  },
+  aggregate(s, subs) {
+    const alts = gapAlts(s.text), gaps = alts.map(() => ({ ok: 0 }));
+    let students = 0, done = 0;
+    for (const a of Object.values(subs)) {
+      if (!Array.isArray(a)) continue;
+      students++;
+      let ok = 0;
+      alts.forEach((al, i) => { if (al.includes(a[i])) { gaps[i].ok++; ok++; } });
+      if (ok === alts.length) done++;
+    }
+    return { gaps, students, done };
+  },
+  fingerprint: (s) => fp(s.text, s.extra),
 };
 
 export const lab = {
-  type: 'lab', label: 'Diagramm-Labor', icon: 'eye', group: 'Inhalt',
+  type: 'lab', label: 'Diagramm-Labor', icon: 'eye', group: 'Aufgaben',
   desc: 'Säulendiagramm mit Reglern (y-Achse, erstes Jahr, Alarmfarbe): zeigt, wie Darstellungen beeinflussen. Braucht ein Diagramm mit einer Reihe.',
   fields: [F.title, { ...F.chart, optional: false, label: 'Daten (eine Reihe)' },
     { key: 'task', kind: 'textarea', label: 'Auftrag', max: 300, optional: true }, F.source, F.notes],

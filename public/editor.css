@@ -143,7 +143,7 @@
 body.preview{overflow:hidden}
 
 /* KI-Dialoge */
-.aiform{display:grid;grid-template-columns:1fr 1fr 150px;gap:12px 14px;text-align:left;margin-top:14px}
+.aiform{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;text-align:left;margin-top:14px}
 .aiform .span2{grid-column:1/-1}
 .aitypes{display:flex;flex-direction:column;gap:8px}
 .aitypes.result{flex-direction:row;flex-wrap:wrap;justify-content:center;margin:6px 0 10px}
@@ -274,3 +274,7 @@ body.preview{overflow:hidden}
 .esec.click{cursor:pointer}.esec.click:hover{background:var(--c-s);color:var(--c-d)}
 .edadd{position:sticky;bottom:-20px;z-index:2;display:flex;flex-direction:column;margin:auto -12px -20px;padding:10px 12px 14px;background:#fbfbfd;border-top:1px solid var(--line)}
 .edadd .addslide{margin-top:0}.edadd .addsec{margin-top:6px}
+.aicount{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.aicount select.field{width:auto;min-width:150px}
+.aic{display:flex;align-items:center;gap:8px;font-size:15px}
+.aic input.field{width:84px}

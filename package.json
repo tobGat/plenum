@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node main/launch.cjs",
     "test": "node --test \"test/*.test.js\"",
-    "test:ui": "node main/launch.cjs test/ui/run.mjs && node main/launch.cjs test/ui/editor.mjs && node main/launch.cjs test/ui/ai.mjs && node main/launch.cjs test/ui/library.mjs && node main/launch.cjs test/ui/states.mjs && node main/launch.cjs test/ui/overlay.mjs",
+    "test:ui": "node main/launch.cjs test/ui/run.mjs && node main/launch.cjs test/ui/editor.mjs && node main/launch.cjs test/ui/ai.mjs && node main/launch.cjs test/ui/library.mjs && node main/launch.cjs test/ui/states.mjs && node main/launch.cjs test/ui/overlay.mjs && node main/launch.cjs test/ui/gap.mjs",
     "assets": "node main/launch.cjs scripts/gen-assets.cjs",
     "notices": "node scripts/notices.cjs",
     "build:store": "node scripts/build-store.cjs",

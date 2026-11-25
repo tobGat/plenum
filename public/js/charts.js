@@ -16,7 +16,7 @@ function topBar(x,y,w,h,r){r=Math.max(0,Math.min(r,w/2,h));const b=y+h;return `M
 function rightBar(x,y,w,h,r){r=Math.max(0,Math.min(r,h/2,w));return `M${x},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+h-r}Q${x+w},${y+h} ${x+w-r},${y+h}H${x}Z`}
 
 export function svgBar(o){const key=chartKey(o,'b'),prev=CH.prev[key]||{},next={};
- const W=o.w||720,H=o.h||380,k=o.series.length,ml=56,mr=12,mt=28,mb=k>1?84:58;
+ const W=o.w||720,H=o.h||380,k=o.series.length,ml=56,mr=12,mt=28,XL=wrapLabels(o.labels,(W-ml-mr)/Math.max(1,o.labels.length)-8,3),mb=(k>1?84:58)+(XL.lines>2?16:0);
  const all=o.series.flatMap(s=>s.values);const{ymin,ymax,step}=axis(o,all);
  const pw=W-ml-mr,ph=H-mt-mb,n=o.labels.length,gw=pw/n,bw=Math.min(66,gw*0.72/k),base=mt+ph;
  const y=v=>base-(Math.min(Math.max(v,ymin),ymax)-ymin)/(ymax-ymin)*ph;
@@ -28,16 +28,28 @@ export function svgBar(o){const key=chartKey(o,'b'),prev=CH.prev[key]||{},next={
   o.series.forEach((se,j)=>{const v=se.values[i]||0,x=gx-bw*k/2+bw*j+2,w=bw-4,yy=y(v),h=base-yy,id=`${l}|${j}`,p=prev[id],isNew=p===undefined,d=isNew?(i*k+j)*55:0,col=(se.colors&&se.colors[i])||se.color;next[id]=h;
    if(h>0.5)s+=`<path class="br" style="--f:${growFrom(p,h).toFixed(3)};--d:${d}ms" d="${topBar(x,yy,w,h,6)}" fill="${col}"/>`;
    const ly=yy-8;s+=`<text class="vl${isNew?'':' mv'}" style="--d:${d}ms;--t:${isNew?0:((base-p-8)-ly).toFixed(1)}px" x="${x+w/2}" y="${ly}" text-anchor="middle"${k>1?' font-size="12"':''}>${fmt(v)}${o.unit||''}</text>`});
-  const parts=String(l).split(' '),half=Math.ceil(parts.length/2),l1=parts.length>1?parts.slice(0,half).join(' '):l,l2=parts.length>1?parts.slice(half).join(' '):'';
-  s+=`<text class="cl" x="${gx}" y="${base+22}" text-anchor="middle">${esc(l1)}${l2?`<tspan x="${gx}" dy="16">${esc(l2)}</tspan>`:''}</text>`});
+  s+=`<text class="cl" x="${gx}" y="${base+22}" text-anchor="middle">${XL.rows[i].map((x,q)=>`<tspan x="${gx}"${q?' dy="16"':''}>${esc(x)}</tspan>`).join('')}<title>${esc(l)}</title></text>`});
  s+=`<line class="bl" x1="${ml}" x2="${W-mr}" y1="${base}" y2="${base}"/>`;
  if(k>1)s+=legend(o.series,ml,H-14);CH.prev[key]=next;return s+'</svg>'}
 
+// Beschriftungen links: Breite der Spalte richtet sich nach dem Text; lange Beschriftungen brechen auf zwei Zeilen um
+// (höchstens 40 % der Breite), was dann noch zu lang ist, wird mit … gekürzt. Zeichenbreite geschätzt (13 px, halbfett).
+const CLW=7.4;
+export function wrapText(txt,maxC,maxLines=2){txt=String(txt??'').trim();const lines=[];let rest=txt;
+ while(rest&&lines.length<maxLines){if(rest.length<=maxC){lines.push(rest);rest='';break}
+  if(lines.length===maxLines-1){lines.push(rest.slice(0,maxC-1).trimEnd()+'…');rest='';break}
+  let cut=rest.lastIndexOf(' ',maxC);if(cut<=0)cut=maxC; // ein einzelnes überlanges Wort wird hart getrennt
+  lines.push(rest.slice(0,cut).trimEnd());rest=rest.slice(cut).trimStart()}
+ return lines.length?lines:['']}
+export function wrapLabels(labels,maxW,maxLines=2){const maxC=Math.max(6,Math.floor(maxW/CLW));let wide=0,most=1;
+ const rows=labels.map(l=>{const lines=wrapText(l,maxC,maxLines);most=Math.max(most,lines.length);lines.forEach(x=>{wide=Math.max(wide,x.length*CLW)});return lines});
+ return{rows,width:Math.ceil(wide),lines:most}}
+
 export function svgHBar(o){const key=chartKey(o,'h'),prev=CH.prev[key]||{},next={};
- const k=o.series.length,n=o.labels.length,rowH=k>1?48:40,W=o.w||720,ml=o.ml||150,mr=66,mt=8,mb=k>1?40:12,H=mt+mb+rowH*n;
+ const k=o.series.length,n=o.labels.length,rowH=k>1?48:40,W=o.w||720,LB=wrapLabels(o.labels,W*0.4),ml=Math.max(90,LB.width+22),mr=66,mt=8,mb=k>1?40:12,H=mt+mb+rowH*n;
  const all=o.series.flatMap(s=>s.values);const xmax=o.xmax||Math.max(1,...all)*1.05,pw=W-ml-mr,bh=(rowH-12)/k;
  let s=svgOpen(W,H);
- o.labels.forEach((l,i)=>{const y0=mt+rowH*i+6;s+=`<text class="cl" x="${ml-12}" y="${y0+(rowH-12)/2+5}" text-anchor="end">${esc(l)}</text>`;
+ o.labels.forEach((l,i)=>{const y0=mt+rowH*i+6;const ls=LB.rows[i],cy=y0+(rowH-12)/2+5;s+=`<text class="cl" x="${ml-12}" y="${ls.length>1?cy-8:cy}" text-anchor="end">${ls.map((x,q)=>`<tspan x="${ml-12}"${q?' dy="16"':''}>${esc(x)}</tspan>`).join('')}<title>${esc(l)}</title></text>`;
   o.series.forEach((se,j)=>{const v=se.values[i]||0,w=Math.max(0,v/xmax*pw),id=`${l}|${j}`,p=prev[id],isNew=p===undefined,d=isNew?(i*k+j)*45:0,col=(se.colors&&se.colors[i])||se.color,yy=y0+bh*j+1;next[id]=w;
    if(w>0.5)s+=`<path class="bh" style="--f:${growFrom(p,w).toFixed(3)};--d:${d}ms" d="${rightBar(ml,yy,w,bh-2,6)}" fill="${col}"/>`;
    s+=`<text class="vl${isNew?'':' mvx'}" style="--d:${d}ms;--t:${isNew?0:(p-w).toFixed(1)}px" x="${ml+w+8}" y="${yy+(bh-2)/2+5}"${k>1?' font-size="12"':''}>${fmt(v)}${o.unit||''}</text>`})});
@@ -77,7 +89,7 @@ export function chartFromSpec(spec, key, extra = {}) {
   if (!spec || !spec.labels || !spec.series) return "";
   const series = spec.series.map((s, j) => ({ name: s.name, values: s.values, color: s.color || CHART_COLORS[j % CHART_COLORS.length] }));
   const o = { key, labels: spec.labels, series, unit: spec.unit ? (/^[%a-zA-Z€]/.test(spec.unit) ? " " + spec.unit : spec.unit) : "", ...extra };
-  if (spec.type === "hbar") return svgHBar({ ...o, ml: Math.min(230, Math.max(90, 8 * Math.max(...spec.labels.map((l) => String(l).length)) + 24)) });
+  if (spec.type === "hbar") return svgHBar(o);
   if (spec.type === "pie") return svgPie({ key, labels: spec.labels, values: series[0].values, center: extra.center || "gesamt" });
   if (spec.type === "line") return svgLine({ key, labels: spec.labels, values: series[0].values, color: series[0].color, ymin: spec.ymin });
   return svgBar({ ...o, ymin: extra.ymin ?? spec.ymin });

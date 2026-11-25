@@ -54,9 +54,9 @@ export function createPresenter({ root, socket, api, info, onExit }) {
   }
 
   function statsStrip(s) {
-    if (!SELF.includes(s.type) && !['task', 'scale', 'wordcloud', 'open'].includes(s.type)) return '';
+    if (!SELF.includes(s.type) && !['task', 'gap', 'scale', 'wordcloud', 'open'].includes(s.type)) return '';
     const a = S.aggs[s.id] || {}, done = a.done || 0, p = prefs[s.id] || {};
-    return html`<div class="stats" id="stats"><div class="stat">${ring(S.online ? done / S.online : 0, `pr:${s.id}`, 42)}<div><b>${done}</b> von ${S.online}<small>${s.type === 'task' ? 'fertig' : SELF.includes(s.type) ? 'fertig' : 'haben geantwortet'}</small></div></div>
+    return html`<div class="stats" id="stats"><div class="stat">${ring(S.online ? done / S.online : 0, `pr:${s.id}`, 42)}<div><b>${done}</b> von ${S.online}<small>${s.type === 'task' ? 'fertig' : s.type === 'gap' ? 'haben alle Lücken richtig' : SELF.includes(s.type) ? 'fertig' : 'haben geantwortet'}</small></div></div>
       ${SELF.includes(s.type) && a.total ? html`<div class="stat plain"><div><span class="big">${fmt((a.ok / a.total) * 100)} %</span><small>im Schnitt richtig</small></div></div>` : ''}
       <div class="stat-actions">${SELF.includes(s.type) ? html`<button class="btn${p.eval ? ' primary' : ''}" data-action="eval">${ic(p.eval ? 'arrowl' : 'bars')}${p.eval ? 'Zurück zur Aufgabe' : 'Auswertung zeigen'}</button>` : ''}<button class="btn" data-action="reset">${ic('refresh')}Zurücksetzen</button></div></div>`;
   }

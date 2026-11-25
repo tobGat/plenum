@@ -49,6 +49,12 @@ async function main() {
   await setVal(w, '#aiSubject', 'Biologie');
   await setVal(w, '#aiGrade', '6. Schulstufe');
   await setVal(w, '#aiCount', '7');
+  // Anzahl Folien: genau / von–bis / offen – es ist immer nur die passende Eingabe sichtbar
+  const mode = (m) => js(w, `(()=>{const s=document.getElementById('aiCountMode'); s.value=${JSON.stringify(m)}; s.dispatchEvent(new Event('change',{bubbles:true})); return [...document.querySelectorAll('.aic')].filter(x=>!x.hidden).map(x=>x.dataset.m).join()})()`);
+  check((await mode('open')) === 'open', 'Modus „Offen lassen“ zeigt falsche Eingaben');
+  check((await mode('range')) === 'range', 'Modus „Von – bis“ zeigt falsche Eingaben');
+  await sleep(200); await shot(w, 'k00-anzahl-von-bis');
+  check((await mode('exact')) === 'exact', 'Modus „Genau“ zeigt falsche Eingaben');
   await js(w, `document.querySelector('.aitypes input[value="sources"]').checked = false`);
 
   // Material: nur ankreuzen und beschreiben – die Dateien hängt man direkt im KI-Chat an

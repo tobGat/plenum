@@ -78,7 +78,7 @@ const unreadable = (answer) => (answer.includes(NO_FILES_REPLY.slice(0, -1))
 
 // ---------- Neue Lektion ----------
 export function showAiCreate({ api, onImported }) {
-  const P = { topic: '', subject: '', grade: '', count: 12, types: DEFAULT_TYPES, notes: '', ...loadPrefs() };
+  const P = { topic: '', subject: '', grade: '', count: 12, countMode: 'exact', countMin: 8, countMax: 15, types: DEFAULT_TYPES, notes: '', ...loadPrefs() };
   const M = createMaterial();
   let answer = '';
 
@@ -89,19 +89,29 @@ export function showAiCreate({ api, onImported }) {
         <label class="fl span2"><span class="fl-l">Thema<i class="req">*</i><small class="muted">– oder unten Material ankreuzen</small></span><input class="field" id="aiTopic" maxlength="200" value="${P.topic}" placeholder="z. B. Photosynthese, Bruchrechnen, Kommasetzung, Wiener Kongress"></label>
         <label class="fl"><span class="fl-l">Fach</span><input class="field" id="aiSubject" maxlength="40" value="${P.subject}" placeholder="z. B. Biologie"></label>
         <label class="fl"><span class="fl-l">Schulstufe / Klasse</span><input class="field" id="aiGrade" maxlength="40" value="${P.grade}" placeholder="z. B. 7. Schulstufe"></label>
-        <label class="fl"><span class="fl-l">Anzahl Folien</span><input class="field" id="aiCount" type="number" min="3" max="40" value="${P.count}"></label>
+        <div class="fl span2"><span class="fl-l">Anzahl Folien</span><div class="aicount">
+          <select class="field" id="aiCountMode" aria-label="Anzahl Folien festlegen">${[['exact', 'Genau'], ['range', 'Von – bis'], ['open', 'Offen lassen']].map(([v2, l]) => html`<option value="${v2}" ${P.countMode === v2 ? 'selected' : ''}>${l}</option>`)}</select>
+          <span class="aic" data-m="exact"><input class="field" id="aiCount" type="number" min="3" max="40" value="${P.count}" aria-label="Anzahl Folien"><span>Folien</span></span>
+          <span class="aic" data-m="range"><span>mindestens</span><input class="field" id="aiCountMin" type="number" min="3" max="40" value="${P.countMin}" aria-label="Mindestens"><span>höchstens</span><input class="field" id="aiCountMax" type="number" min="3" max="40" value="${P.countMax}" aria-label="Höchstens"><span>Folien</span></span>
+          <span class="aic muted" data-m="open">Die KI wählt die Anzahl passend zum Thema (höchstens 40).</span>
+        </div></div>
         ${materialSection(M)}
         <div class="fl span2"><span class="fl-l">Folientypen</span><div class="aitypes">${GROUPS.map((g) => html`<div class="aig"><small>${g}</small><div>${TYPE_LIST.filter((t) => t.group === g).map((t) => html`<label class="chipcheck"><input type="checkbox" value="${t.type}" ${t.type === 'title' ? 'checked disabled' : P.types.includes(t.type) ? 'checked' : ''}><span>${ic(t.icon)}${t.label}</span></label>`)}</div></div>`)}</div></div>
         <label class="fl span2"><span class="fl-l">Wünsche (optional)</span><textarea class="field" id="aiNotes" rows="2" maxlength="600" placeholder="z. B. Bezug zu Österreich, eine Gruppenarbeit, sehr kurze Texte, zwei Quizrunden">${P.notes}</textarea></label>
       </div>
       <div class="ov-actions"><button class="btn" data-action="close">Abbrechen</button><button class="btn primary" data-ai="next">${ic('arrow')}Prompt erstellen</button></div>`, { wide: true });
     box.querySelector('#aiTopic').focus();
+    const modeSel = box.querySelector('#aiCountMode'), showMode = () => box.querySelectorAll('.aic').forEach((x) => { x.hidden = x.dataset.m !== modeSel.value; });
+    modeSel.addEventListener('change', showMode); showMode();
     wireMaterial(box, M);
     on(box, {
       next: () => {
         const v = (id) => box.querySelector(id).value.trim();
         P.topic = v('#aiTopic'); P.subject = v('#aiSubject'); P.grade = v('#aiGrade'); P.notes = v('#aiNotes');
-        P.count = Math.max(3, Math.min(40, parseInt(v('#aiCount'), 10) || 12));
+        const num = (id, d) => Math.max(3, Math.min(40, parseInt(v(id), 10) || d));
+        P.countMode = modeSel.value; P.count = num('#aiCount', 12);
+        P.countMin = num('#aiCountMin', 8); P.countMax = num('#aiCountMax', 15);
+        if (P.countMin > P.countMax) [P.countMin, P.countMax] = [P.countMax, P.countMin];
         P.types = ['title', ...[...box.querySelectorAll('.aitypes input:checked:not(:disabled)')].map((x) => x.value)];
         if (!P.topic && !M.on) { toast('Bitte ein Thema angeben oder Material ankreuzen', 'err'); box.querySelector('#aiTopic').focus(); return; }
         savePrefs(P);

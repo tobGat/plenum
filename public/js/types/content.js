@@ -4,6 +4,8 @@ import { ic } from '../core/icons.js';
 import { chartBox, withChart, srcLine, colorOf, themeCols, gfxHtml, isPhoto } from '../core/parts.js';
 import { svgBar } from '../charts.js';
 import { CHART_COLORS } from '/shared/palette.js';
+import { gapAlts } from '/shared/types/content.js';
+import { takeDrop } from '../core/drag.js';
 
 // Titelbild-Motive (weiß auf der Farbfläche, in Akzentfarben beim Aufbau „zentriert“)
 function heroArt(kind = 'chart') {
@@ -55,22 +57,84 @@ function infoCard(k, i) {
 const infoBody = (s, key) => withChart(s.chart, key, html`<div class="grid${s.chart ? ' one' : ''}">${(s.cards || []).map(infoCard)}</div>`, s.source);
 export const info = { host: (s, c) => infoBody(s, c.key), student: (d, c) => infoBody(d, c.key) };
 
-function gapBody(s, local, key) {
-  const st = local.gap || (local.gap = {}), seen = local.seen || (local.seen = {});
+const GAP_RE = /(\[\[[^\]]+\]\])/g, isGap = (part) => /^\[\[[^\]]+\]\]$/.test(part);
+// Beamer: Lücken bleiben verdeckt, die Lehrkraft deckt zum Besprechen auf; darunter der Fortschritt der Klasse
+function gapHost(s, c) {
+  const st = c.local.gap || (c.local.gap = {}), seen = c.local.seen || (c.local.seen = {}), alts = gapAlts(s.text);
   let i = -1;
-  const parts = String(s.text || '').split(/(\[\[[^\]]+\]\])/g).map((part) => {
-    const m = part.match(/^\[\[([^\]]+)\]\]$/);
-    if (!m) return md(part);
+  const parts = String(s.text || '').split(GAP_RE).map((part) => {
+    if (!isGap(part)) return md(part);
     i++;
-    const sol = m[1].split('|').map((x) => x.trim()).filter(Boolean).join(' / ');
     if (!(st.all || st[i])) return html`<button class="gap" data-action="t:reveal" data-i="${i}" aria-label="Lösung zeigen">?</button>`;
     const nw = !seen[i]; seen[i] = 1;
-    return html`<span class="gap open${nw ? ' new' : ''}">${sol}</span>`;
+    return html`<span class="gap open${nw ? ' new' : ''}">${(alts[i] || []).join(' / ')}</span>`;
   });
-  return withChart(s.chart, key, html`${s.tip ? html`<div class="tip anim">${ic('bulb')}<span>${s.tip}</span></div>` : ''}<div class="filltext anim" style="--i:1">${parts}</div><div class="bar"><button class="btn" data-action="t:revealAll">${ic('eye')}Alle Lösungen zeigen</button></div>`, s.source);
+  return withChart(s.chart, c.key, html`${s.tip ? html`<div class="tip anim">${ic('bulb')}<span>${s.tip}</span></div>` : ''}<div class="filltext anim" style="--i:1">${parts}</div>
+    <div class="bar"><button class="btn" data-action="t:revealAll">${ic('eye')}Alle Lösungen zeigen</button><span class="gapprog muted">Die Klasse zieht die Wörter aus dem Wortkasten in die Lücken.</span></div>`, s.source);
 }
-const gapActions = { reveal(el, c) { (c.local.gap || (c.local.gap = {}))[el.dataset.i] = true; c.render(); }, revealAll(el, c) { (c.local.gap || (c.local.gap = {})).all = true; c.render(); } };
-export const gap = { host: (s, c) => gapBody(s, c.local, c.key), student: (d, c) => gapBody(d, c.local, c.key), hostActions: gapActions, studentActions: gapActions };
+const gapHostActions = { reveal(el, c) { (c.local.gap || (c.local.gap = {}))[el.dataset.i] = true; c.render(); }, revealAll(el, c) { (c.local.gap || (c.local.gap = {})).all = true; c.render(); } };
+
+// Schülergerät: Wörter aus dem Wortkasten in die Lücken ziehen (oder Wort antippen, dann Lücke), danach prüfen.
+// Zustand: place = Lücke → Wort-ID, ok = geprüft und richtig (fest), pick = angetipptes Wort, bad = eben falsch (für die Animation)
+function gapState(d, local) {
+  if (local.g) return local.g;
+  const alts = gapAlts(d.text), g = local.g = { place: {}, ok: {}, pick: null, tries: 0, bad: {} };
+  (d.mine || []).forEach((txt, i) => { // schon abgegebene richtige Wörter wiederherstellen
+    if (txt == null || !alts[i] || !alts[i].includes(txt)) return;
+    const used = new Set(Object.values(g.place)), chip = d.bank.find((x) => x.text === txt && !used.has(x.id));
+    if (chip) { g.place[i] = chip.id; g.ok[i] = true; }
+  });
+  if (d.mine) g.tries = 1;
+  return g;
+}
+function gapStudent(d, c) {
+  const g = gapState(d, c.local), n = gapAlts(d.text).length, byId = new Map(d.bank.map((x) => [x.id, x]));
+  const used = new Set(Object.values(g.place)), bad = g.bad, picking = g.pick !== null;
+  g.bad = {};
+  let i = -1, open = 0;
+  const parts = String(d.text || '').split(GAP_RE).map((part) => {
+    if (!isGap(part)) return md(part);
+    i++;
+    const chip = byId.get(g.place[i]);
+    if (g.ok[i] && chip) return html`<span class="gap open">${chip.text}</span>`;
+    if (chip) { open++; return html`<button class="gap filled" data-action="t:place" data-drop="1" data-drag="${chip.id}" data-i="${i}" title="Antippen legt das Wort zurück">${chip.text}</button>`; }
+    return html`<button class="gap blank${bad[i] ? ' bad' : ''}${picking ? ' target' : ''}" data-action="t:place" data-drop="1" data-i="${i}" aria-label="Lücke ${i + 1}"></button>`;
+  });
+  const okN = Object.keys(g.ok).length, all = n > 0 && okN === n, rest = d.bank.filter((x) => !used.has(x.id));
+  const bank = all ? '' : html`<div class="wordbank anim" data-drop="1" data-action="t:unplace" aria-label="Wortkasten">${rest.length
+    ? rest.map((x) => html`<button class="wchip${g.pick === x.id ? ' on' : ''}" data-action="t:pick" data-drag="${x.id}" data-id="${x.id}">${x.text}</button>`)
+    : html`<span class="muted">Alle Wörter sind eingesetzt – jetzt prüfen.</span>`}</div>`;
+  const foot = all
+    ? html`<div class="fb ok anim">${ic('check')}<span><b>Alles richtig!</b> ${g.tries > 1 ? `Geschafft in ${g.tries} Versuchen.` : 'Gleich beim ersten Versuch.'}</span></div>`
+    : html`<div class="bar"><button class="btn primary" data-action="t:check" ${open ? '' : 'disabled'}>${ic('check')}Prüfen</button><span class="muted">${g.tries && Object.keys(bad).length ? 'Falsche Wörter sind zurück im Wortkasten – versuch es noch einmal.' : okN ? `${okN} von ${n} richtig` : open ? 'Fertig eingesetzt? Dann prüfen.' : 'Ziehe die Wörter in die Lücken.'}</span></div>`;
+  return withChart(d.chart, c.key, html`${d.tip ? html`<div class="tip anim">${ic('bulb')}<span>${d.tip}</span></div>` : ''}${bank}<div class="filltext anim" style="--i:1">${parts}</div>${foot}`, d.source);
+}
+const gapFree = (g, id) => { for (const k of Object.keys(g.place)) if (String(g.place[k]) === String(id) && !g.ok[k]) delete g.place[k]; };
+const gapStudentActions = {
+  pick(el, c) { const g = c.local.g, id = +el.dataset.id; g.pick = g.pick === id ? null : id; c.render(); },
+  place(el, c) {
+    const g = c.local.g, i = +el.dataset.i, dv = takeDrop();
+    if (g.ok[i]) return;
+    const val = dv !== null ? +dv : g.pick;
+    if (val === null || val === undefined) { if (g.place[i] !== undefined) { delete g.place[i]; c.render(); } return; } // antippen: Wort zurücklegen
+    if (Object.keys(g.ok).some((k) => g.place[k] === val)) return; // dieses Wort sitzt schon fest
+    gapFree(g, val);
+    g.place[i] = val; g.pick = null; c.render();
+  },
+  unplace(el, c) { const dv = takeDrop(); if (dv === null) return; gapFree(c.local.g, dv); c.render(); },
+  check(el, c) {
+    const g = c.local.g, d = c.p.data, alts = gapAlts(d.text), byId = new Map(d.bank.map((x) => [x.id, x]));
+    g.tries++; g.bad = {}; g.pick = null;
+    for (const k of Object.keys(g.place)) {
+      if (g.ok[k]) continue;
+      const chip = byId.get(g.place[k]);
+      if (chip && alts[k] && alts[k].includes(chip.text)) g.ok[k] = true; else { delete g.place[k]; g.bad[k] = 1; }
+    }
+    c.render();
+    c.submit({ answers: alts.map((_, k) => (g.ok[k] ? byId.get(g.place[k]).text : null)) });
+  },
+};
+export const gap = { host: gapHost, student: gapStudent, hostActions: gapHostActions, studentActions: gapStudentActions };
 
 export const lab = {
   host(s, c) {

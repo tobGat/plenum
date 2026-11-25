@@ -476,7 +476,7 @@
       "section": "S-lesen",
       "type": "gap",
       "title": "Ein Diagramm beschreiben",
-      "tip": "Wortkasten: Balkendiagramm · Jugend-Internet-Monitor · WhatsApp · YouTube · Discord · Prozentpunkte",
+      "tip": "Lies zuerst den ganzen Text und sieh dir das Diagramm an.",
       "text": "Das [[Balkendiagramm]] zeigt, welche Plattformen 11- bis 17-Jährige in Österreich nutzen. Die Daten stammen aus dem [[Jugend-Internet-Monitor]] 2026.\nAn der Spitze liegt [[WhatsApp]] mit 82 Prozent, knapp dahinter folgt [[YouTube]] mit 76 Prozent. Am seltensten wird [[Discord]] genannt. Zwischen YouTube und Discord liegen 58 [[Prozentpunkte]].",
       "chart": {
         "type": "hbar",
