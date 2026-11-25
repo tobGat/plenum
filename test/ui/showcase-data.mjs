@@ -76,4 +76,14 @@ export const LESSONS = [
         demo: { shot: 'klassenrat-umfrage-kreisdiagramm', pie: true, votes: [1, 1, 0, 1, 2, 1, 0, 3, 2, 1] } },
     ],
   },
+  {
+    title: 'Der Stromkreis', subject: 'Physik', grade: '7. Schulstufe', theme: 'blueprint',
+    sections: [sec('S-p1', 'Leiter und Nichtleiter', 'cyan', 'bulb')],
+    slides: [
+      { type: 'sort', section: 'S-p1', title: 'Leitet das Strom?', question: 'Ordne die Stoffe zu.',
+        categories: [{ name: 'Leiter', items: ['Kupfer', 'Eisen', 'Aluminium', 'Silber'] }, { name: 'Nichtleiter', items: ['Glas', 'Gummi', 'Kunststoff', 'Porzellan'] }],
+        graphic: { src: 'lib:idee', pos: 'corner', size: 's' },
+        demo: { shot: 'physik-zuordnen-auswertung', eval: true } },
+    ],
+  },
 ];
