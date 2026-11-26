@@ -202,6 +202,25 @@ test('Stände: speichern, laden, geänderte Folien erkennen', async () => {
   assert.equal(ld.slot.name, 'Klasse 4a');
 });
 
+test('Ergebnisse für den PDF-Export: laufende Präsentation und gespeicherter Stand, nur für die Lehrkraft', async () => {
+  const s = L.slides.find((x) => x.type === 'mc');
+  const live = await (await api(`/lessons/${lessonId}/results/_live`)).json();
+  assert.equal(live.live, true);
+  assert.ok(live.aggs[s.id] && live.aggs[s.id].n >= 1, 'laufende Präsentation liefert die Auswertung');
+  const saved = await emit(host, 'host:saveAs', 'PDF Test');
+  assert.equal(saved.ok, true);
+  const r = await (await api(`/lessons/${lessonId}/results/${saved.slot.id}`)).json();
+  assert.equal(r.name, 'PDF Test');
+  assert.equal(r.aggs[s.id].n, live.aggs[s.id].n, 'Stand liefert dieselben Zählwerte');
+  assert.ok(r.online >= 1 && typeof r.savedAt === 'string');
+  for (const q of L.slides.filter((x) => x.type === 'quiz')) if (r.aggs[q.id]) assert.equal(r.aggs[q.id].phase, 'revealed', 'Quizfragen gelten im Stand als aufgelöst');
+  assert.ok(!L.slides.some((x) => x.type === 'leaderboard' && r.aggs[x.id]), 'keine Rangliste aus einem Stand');
+  assert.ok(!JSON.stringify(r).includes('studentBBB'), 'keine Gerätekennungen in den Ergebnissen');
+  assert.equal((await api(`/lessons/${lessonId}/results/gibt-es-nicht`)).status, 404);
+  assert.equal((await fetch(`${base}/api/host/lessons/${lessonId}/results/_live`)).status, 403);
+  assert.equal((await fetch(`${base}/print?lesson=${lessonId}`)).status, 403);
+});
+
 test('Folien ohne Aufgabe: standardmäßig nur vorne, auf Wunsch auch auf den Geräten', async () => {
   const info = await goto('info');
   const a = await student('hiddenAAA');

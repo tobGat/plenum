@@ -9,12 +9,13 @@ export function fit(ct) {
   const availW = ct.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
   const zmin = narrow ? 0.85 : 0.5, zmax = narrow ? 1 : Math.max(1, Math.min(1.3, availW / 1240));
   ct.classList.add('measuring');
-  const fits = (z) => { w.style.zoom = z; return ct.scrollHeight <= ct.clientHeight + 1; };
+  // Muss verkleinert werden, darf die Folie dafür die ganze Breite nutzen: So bricht weniger Text um und die Schrift bleibt größer.
+  const fits = (z) => { w.style.zoom = z; w.style.maxWidth = !narrow && z < 1 ? `${Math.floor(availW / z)}px` : ''; return ct.scrollHeight <= ct.clientHeight + 1; };
   let z = zmax, ok = fits(z);
   if (!ok) {
     if (fits(zmin)) { let lo = zmin, hi = zmax; for (let i = 0; i < 7; i++) { const m = (lo + hi) / 2; if (fits(m)) lo = m; else hi = m; } z = lo; ok = true; } else z = zmin;
   }
-  w.style.zoom = String(Math.floor(z * 1000) / 1000);
+  fits(Math.floor(z * 1000) / 1000); // endgültiger Zoom samt passender Breite
   ct.classList.toggle('fitted', ok);
   ct.classList.remove('measuring');
 }

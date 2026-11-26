@@ -12,6 +12,13 @@ export const quiz = {
   host(s, c) {
     const a = c.agg || { phase: 'idle', n: 0, counts: {} }, ph = a.phase || 'idle';
     const ctl = (act, label, icn, primary) => html`<button class="btn${primary ? ' primary big' : ''}" data-action="quiz" data-q="${act}">${ic(icn)}${label}</button>`;
+    // Druck (PDF) ohne Ergebnisse: Frage und Antworten ohne Start-Bildschirm und Countdown, auf Wunsch mit markierter Lösung
+    if (c.print && !c.results) {
+      return html`<div class="quiz-head anim"><div class="qq">${md(s.question)}</div><div class="qdone">${ic('clock')}${s.time} Sekunden</div></div>
+        <div class="qopts anim" style="--i:1">${s.options.map((o, i) => { const right = c.solution && o.correct, dim = c.solution && !o.correct;
+          return html`<div class="qopt${right ? ' right' : ''}${dim ? ' dim' : ''}" style="--qc:${QCOLORS[i % QCOLORS.length]}"><span class="qshape">${SHAPES[i % SHAPES.length]}</span><span class="qtext">${o.text}</span>${right ? ic('check', 'mk') : ''}</div>`; })}</div>
+        ${c.solution && s.explanation ? fb(true, s.explanation) : ''}`;
+    }
     if (ph === 'idle') return html`<div class="quiz-idle anim"><div class="qbadge">${ic('trophy')}Quizfrage</div><p>${s.time} Sekunden · bis zu ${s.points} Punkte</p>${ctl('start', 'Quiz starten', 'play', true)}<small class="muted">Die Frage erscheint erst nach dem Start – auf allen Geräten gleichzeitig.</small></div>`;
     if (ph === 'ready') return html`<div class="quiz-ready anim"><div class="qcount" style="--ms:${a.readyMs}ms">Bereit?</div><p>Gleich geht’s los …</p></div>`;
     const revealed = ph === 'revealed', closed = ph === 'closed' || revealed;

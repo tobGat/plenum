@@ -80,6 +80,7 @@ export function createEditor({ root, api, socket, info, lessonId, onClose, onPre
       <button class="hbtn" data-action="undo" id="bundo" title="Rückgängig (Strg+Z)" aria-label="Rückgängig">${ic('undo')}</button>
       <button class="hbtn flipx" data-action="redo" id="bredo" title="Wiederholen (Strg+Y)" aria-label="Wiederholen">${ic('undo')}</button>
       <button class="hbtn" data-action="aiRevise" title="Lektion von einer KI überarbeiten lassen">${ic('sparkles')}<span>Mit KI überarbeiten</span></button>
+      <button class="hbtn" data-action="pdf" title="Folien als PDF exportieren – nur die Fragen, mit Lösungen oder mit Ergebnissen">${ic('file')}<span>PDF</span></button>
       <button class="hbtn hprimary" data-action="present">${ic('play')}<span>Präsentieren</span></button>
     </header>
     <div id="edbanner"></div>
@@ -539,6 +540,7 @@ export function createEditor({ root, api, socket, info, lessonId, onClose, onPre
       onClose();
     },
     present: async () => { await flush(); onPresent(L.id); },
+    pdf: async () => { await flush(); const { showPdfExport } = await import('./pdf.js'); showPdfExport({ api, lessonId: L.id, title: L.title, live: presenting }); },
     undo: () => restore(undoStack, redoStack),
     redo: () => restore(redoStack, undoStack),
     apply: async () => {

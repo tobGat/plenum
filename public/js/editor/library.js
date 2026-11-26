@@ -138,11 +138,12 @@ export function createLibrary({ root, api, socket, info, onPresent, onEdit, onRe
     new: async () => { try { const L = await api('/lessons', { method: 'POST', body: {} }); onEdit(L.id); } catch (e) { toast(e.message, 'err'); } },
     more: (el) => {
       const L = lessons.find((x) => x.id === el.dataset.id);
-      overlay(html`<h2>${L.title}</h2><div class="menu"><button class="btn" data-action="dup" data-id="${L.id}">${ic('copy')}Duplizieren</button><button class="btn" data-action="export" data-id="${L.id}">${ic('download')}Exportieren (.plenum)</button>
+      overlay(html`<h2>${L.title}</h2><div class="menu"><button class="btn" data-action="dup" data-id="${L.id}">${ic('copy')}Duplizieren</button><button class="btn" data-action="export" data-id="${L.id}">${ic('download')}Exportieren (.plenum)</button><button class="btn" data-action="pdf" data-id="${L.id}">${ic('file')}Als PDF exportieren …</button>
         <button class="btn" data-action="aiRevise" data-id="${L.id}">${ic('sparkles')}Mit KI überarbeiten</button><button class="btn danger" data-action="del" data-id="${L.id}">${ic('trash')}Löschen</button></div>`);
     },
     dup: async (el) => { closeOv(); try { await api(`/lessons/${el.dataset.id}/duplicate`, { method: 'POST' }); toast('Kopie angelegt'); load(); } catch (e) { toast(e.message, 'err'); } },
     export: (el) => { closeOv(); download(`/lessons/${el.dataset.id}/export`); },
+    pdf: async (el) => { const L = lessons.find((x) => x.id === el.dataset.id); closeOv(); const { showPdfExport } = await import('./pdf.js'); showPdfExport({ api, lessonId: L.id, title: L.title, live: presenting === L.id }); },
     del: async (el) => {
       const L = lessons.find((x) => x.id === el.dataset.id);
       if (!(await ask(`„${L.title}“ löschen?`, 'Die Lektion und ihre gespeicherten Stände werden gelöscht. Das lässt sich nicht rückgängig machen.', { ok: 'Löschen', danger: true }))) return;

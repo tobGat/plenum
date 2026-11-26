@@ -34,7 +34,10 @@ verantwortlich.
    Wortwolke, offene Antworten (Freitext), Lösungen von Aufgaben und Quizantworten mit
    Punkten. Sie werden während der Präsentation verarbeitet und als **„Stand“** auf dem
    Computer der Lehrkraft gespeichert (automatisch und auf Wunsch unter einem Namen), damit
-   eine Stunde später fortgesetzt werden kann.
+   eine Stunde später fortgesetzt werden kann. Exportiert die Lehrkraft Folien „mit
+   Ergebnissen“ als PDF, enthält diese Datei die ausgewerteten Antworten (ohne Namen;
+   Begriffe und Freitexte nur, soweit sie freigegeben sind) und liegt dort, wo die Lehrkraft
+   sie speichert.
 3. **Zufällige Gerätekennung** – jedes Schülergerät erzeugt beim ersten Besuch eine
    zufällige Zeichenfolge und speichert sie im Browser (Local Storage). Damit bleiben
    Antworten nach dem Neuladen der Seite zugeordnet. Die Kennung enthält **keinen Namen**
@@ -71,8 +74,14 @@ gespeichert**.
 
 ## Verbindungen ins Internet
 
-Plenum selbst stellt **keine Verbindung ins Internet** her. Ausnahmen:
+Plenum stellt von sich aus **keine Verbindung ins Internet** her. Ausnahmen:
 
+- **Video-Folien:** Hat die Lehrkraft auf einer Folie ein Video verlinkt (z. B. von
+  YouTube), lädt Plenum es **erst nach ihrem Klick auf „Video abspielen“** – und nur auf dem
+  Computer der Lehrkraft. Dabei wird eine Verbindung zum Anbieter des Videos aufgebaut (bei
+  YouTube über die datensparsame Adresse *youtube-nocookie.com*; es gelten die
+  Datenschutzbestimmungen von Google). Die Geräte der Schüler:innen zeigen nur die Aufträge
+  zum Video und verbinden sich **nicht** mit dem Anbieter.
 - **Installation und Updates** erfolgen über den Microsoft Store; dabei gelten die
   Datenschutzbestimmungen von Microsoft.
 - **Links** (z. B. auf einer Quellen-Folie) öffnen sich nur nach einem Klick im

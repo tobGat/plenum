@@ -101,6 +101,32 @@ async function start() {
     if (on !== w.isFullScreen()) w.setFullScreen(on);
     return on;
   });
+  // PDF-Export: Speicherort wählen, Druckseite /print in einem unsichtbaren Fenster zeichnen lassen und als PDF drucken
+  let lastPdf = null;
+  ipcMain.handle('exportPdf', async (e, o) => {
+    if (!e.senderFrame || !e.senderFrame.url.startsWith(base) || !o || !/^[\w-]{1,80}$/.test(String(o.lesson))) return { ok: false, error: 'Nicht erlaubt.' };
+    const name = String(o.name || 'Plenum').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || 'Plenum';
+    const dir = lastPdf && fs.existsSync(path.dirname(lastPdf)) ? path.dirname(lastPdf) : app.getPath('documents');
+    const r = await dialog.showSaveDialog(BrowserWindow.fromWebContents(e.sender), { title: 'PDF speichern', defaultPath: path.join(dir, `${name}.pdf`), filters: [{ name: 'PDF', extensions: ['pdf'] }] });
+    if (r.canceled || !r.filePath) return { ok: false, canceled: true };
+    const qs = new URLSearchParams({ lesson: String(o.lesson), variant: ['solution', 'results'].includes(o.variant) ? o.variant : 'blank', format: o.format === 'handout' ? 'handout' : 'slides' });
+    if (o.variant === 'results' && /^[\w-]{1,40}$/.test(String(o.state))) qs.set('state', String(o.state));
+    if (o.notes) qs.set('notes', '1');
+    if (o.light) qs.set('light', '1');
+    const pw = new BrowserWindow({ show: false, width: 1280, height: 720, ...windowDefaults(), webPreferences: { ...windowDefaults().webPreferences, backgroundThrottling: false } });
+    try {
+      await pw.loadURL(`${base}/print?${qs}`);
+      const res = await Promise.race([pw.webContents.executeJavaScript('window.printReady', true), new Promise((resolve) => setTimeout(() => resolve({ ok: false, error: 'Das Zeichnen der Folien hat zu lange gedauert.' }), 180000))]);
+      if (!res || !res.ok) return { ok: false, error: (res && res.error) || 'Die Folien konnten nicht gezeichnet werden.' };
+      const pdf = await pw.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true, margins: { marginType: 'none' } });
+      try { await fs.promises.writeFile(r.filePath, pdf); } catch (err) {
+        return { ok: false, error: err.code === 'EBUSY' || err.code === 'EPERM' ? 'Die Datei ist gerade in einem anderen Programm geöffnet. Bitte dort schließen oder einen anderen Namen wählen.' : `Die Datei konnte nicht gespeichert werden: ${err.message}` };
+      }
+      lastPdf = r.filePath;
+      return { ok: true, path: r.filePath, slides: res.slides, over: res.over || [] };
+    } catch (err) { log('PDF-Export', err); return { ok: false, error: `Das PDF konnte nicht erstellt werden: ${err.message}` }; } finally { if (!pw.isDestroyed()) pw.destroy(); }
+  });
+  ipcMain.handle('openPdf', (e) => (e.senderFrame.url.startsWith(base) && lastPdf ? shell.openPath(lastPdf) : 'nicht erlaubt'));
   ipcMain.handle('openPath', (e, p) => (e.senderFrame.url.startsWith(base) && path.resolve(p) === path.resolve(srv.store.lessonsDir) ? shell.openPath(p) : 'nicht erlaubt'));
   ipcMain.handle('copyText', (e, t) => { if (!e.senderFrame.url.startsWith(base)) return false; clipboard.writeText(String(t).slice(0, 2e6)); return true; });
   ipcMain.handle('chooseFolder', async (e, def) => {

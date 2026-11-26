@@ -5,6 +5,8 @@ contextBridge.exposeInMainWorld('plenumApp', {
   setPresenting: (on) => ipcRenderer.send('presenting', !!on),
   fullScreen: (mode) => ipcRenderer.invoke('fullScreen', String(mode)),
   onFullScreen: (cb) => { const f = (e, on) => cb(!!on); ipcRenderer.on('fullscreen', f); return () => ipcRenderer.removeListener('fullscreen', f); },
+  exportPdf: (opts) => ipcRenderer.invoke('exportPdf', opts && typeof opts === 'object' ? { ...opts } : {}),
+  openPdf: () => ipcRenderer.invoke('openPdf'),
   openPath: (p) => ipcRenderer.invoke('openPath', String(p)),
   chooseFolder: (def) => ipcRenderer.invoke('chooseFolder', String(def || '')),
   copyText: (t) => ipcRenderer.invoke('copyText', String(t)),

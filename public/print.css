@@ -1,0 +1,28 @@
+/* Druckseite für den PDF-Export: je Folie ein iframe mit der Beamer-Darstellung (1280 × 720) */
+html,body{margin:0;padding:0;background:#fff;color:#111827;font-family:"Inter",system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+iframe{border:0;display:block;width:1280px;height:720px;background:#fff}
+
+/* Präsentation: eine Folie pro Seite, 16:9 */
+body.f-slides .pg{width:1280px;height:720px;overflow:hidden;break-after:page;page-break-after:always}
+body.f-slides .pg:last-child{break-after:auto;page-break-after:auto}
+
+/* Handzettel: A4 hoch, drei Folien pro Seite, daneben Titel und Notizen bzw. Schreiblinien */
+body.f-handout{width:703px;font-size:12.5px;line-height:1.45}
+.hhead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2px solid #111827;padding-bottom:8px;margin-bottom:14px}
+.hhead h1{font-family:"Lexend","Inter",sans-serif;font-size:21px;line-height:1.2;margin:0}
+.hhead .hmeta{font-size:12px;color:#4b5563;text-align:right;white-space:nowrap}
+.hhead .hsub{font-size:12.5px;color:#4b5563;margin-top:3px}
+.hrow{display:flex;gap:18px;align-items:flex-start;height:300px;margin-bottom:12px;break-inside:avoid;page-break-inside:avoid}
+.hrow .hside{align-self:stretch}
+.thumb{flex:none;width:420px;height:236px;overflow:hidden;border:1px solid #9ca3af;border-radius:5px;background:#fff}
+.thumb iframe{transform:scale(.328125);transform-origin:0 0}
+.hside{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.hnum{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#4b5563}
+.htitle{font-family:"Lexend","Inter",sans-serif;font-weight:600;font-size:14.5px;line-height:1.25;margin:2px 0 6px}
+.hnotes{font-size:12px;color:#1f2937;white-space:pre-wrap;overflow:hidden;margin-bottom:6px}
+.hnotes b{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;margin-bottom:1px}
+.hlines{flex:1;min-height:0;background:repeating-linear-gradient(transparent 0 25px,#9ca3af 25px 26px)}
+.perr{font:16px/1.5 system-ui,sans-serif;padding:30px;color:#b91c1c}
+
+/* Am Bildschirm (zum Ansehen beim Entwickeln) Seiten untereinander mit Abstand */
+@media screen{body{background:#e5e7eb}body.f-slides .pg{margin:12px auto;box-shadow:0 4px 18px rgba(0,0,0,.2)}body.f-handout{margin:12px auto;padding:20px;background:#fff}}

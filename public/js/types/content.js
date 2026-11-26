@@ -4,7 +4,8 @@ import { ic } from '../core/icons.js';
 import { chartBox, withChart, srcLine, colorOf, themeCols, gfxHtml, isPhoto } from '../core/parts.js';
 import { svgBar } from '../charts.js';
 import { CHART_COLORS } from '/shared/palette.js';
-import { gapAlts } from '/shared/types/content.js';
+import { gapAlts, videoInfo, fmtTime } from '/shared/types/content.js';
+import { shuffled } from '/shared/types/common.js';
 import { takeDrop } from '../core/drag.js';
 
 // Titelbild-Motive (weiß auf der Farbfläche, in Akzentfarben beim Aufbau „zentriert“)
@@ -57,6 +58,33 @@ function infoCard(k, i) {
 const infoBody = (s, key) => withChart(s.chart, key, html`<div class="grid${s.chart ? ' one' : ''}">${(s.cards || []).map(infoCard)}</div>`, s.source);
 export const info = { host: (s, c) => infoBody(s, c.key), student: (d, c) => infoBody(d, c.key) };
 
+// Video: am Beamer zuerst nur ein Startbild – erst der Klick lädt das Video (bei YouTube also erst dann eine Verbindung dorthin).
+// Die Geräte der Klasse zeigen nur die Beobachtungsaufträge.
+const videoSide = (s, i0 = 1) => html`${s.intro ? html`<div class="card vintro anim" style="--i:${i0}">${richLines(s.intro)}</div>` : ''}
+  ${(s.tasks || []).length ? html`<div class="card vtasks anim" style="--i:${i0 + 1}"><div class="vt-h">${ic('eye')}Achte beim Video auf</div><ol>${s.tasks.map((t) => html`<li>${t}</li>`)}</ol></div>` : ''}
+  ${s.discussion ? html`<div class="hint anim" style="--i:${i0 + 2}">${ic('chat')}<span>${s.discussion}</span></div>` : ''}`;
+export const video = {
+  host(s, c) {
+    const v = videoInfo(s.url, s.start, s.end), playing = !!c.local.play && !c.print && (v.kind === 'youtube' || v.kind === 'file');
+    const span = v.from || v.to > v.from ? ` · ${v.from ? `ab ${fmtTime(v.from)}` : ''}${v.to > v.from ? `${v.from ? ' ' : ''}bis ${fmtTime(v.to)}` : ''}` : '';
+    const open = v.watch ? html`<a class="vopen" href="${v.watch}" target="_blank" rel="noopener">${ic('link')}Im Browser öffnen</a>` : '';
+    let stage;
+    if (v.kind === 'none') stage = html`<div class="vposter off"><div class="vp-ic">${ic('alert')}</div><div class="vp-t">Keine gültige Video-Adresse</div><div class="vp-s">Bitte im Editor einen Link eintragen, z. B. von YouTube.</div></div>`;
+    else if (playing) stage = v.kind === 'youtube'
+      ? html`<iframe class="vframe" src="${v.embed}&autoplay=1" title="${s.title}" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>`
+      : html`<video class="vframe" src="${v.src}" controls autoplay playsinline></video>`;
+    else if (c.print) stage = html`<div class="vposter"><div class="vp-ic">${ic('play')}</div><div class="vp-t">${v.host}${span}</div><div class="vp-s vurl">${v.watch}</div></div>`;
+    else if (v.kind === 'link') stage = html`<div class="vposter"><div class="vp-ic">${ic('link')}</div><div class="vp-t">Video auf ${v.host}</div><div class="vp-s">Dieses Video lässt sich nicht einbetten.</div><a class="btn primary big" href="${v.watch}" target="_blank" rel="noopener">${ic('play')}Im Browser öffnen</a></div>`;
+    else stage = html`<button class="vposter" data-action="t:play" aria-label="Video abspielen"><span class="vp-ic play">${ic('play')}</span><span class="vp-t">Video abspielen</span><span class="vp-s">${v.host}${span}${v.kind === 'youtube' ? ' · der Klick lädt das Video von YouTube' : ''}</span></button>`;
+    const bar = c.print || v.kind === 'none' ? '' : html`<div class="vbar">${playing ? html`<button class="btn" data-action="t:stop">${ic('stop')}Video schließen</button>` : ''}${v.kind === 'link' ? '' : open}</div>`;
+    const side = videoSide(s);
+    const has = !!(s.intro || (s.tasks || []).length || s.discussion);
+    return html`<div class="${has ? 'grid2 vgrid' : 'vsolo'}"><div class="vstage anim">${stage}${bar}</div>${has ? html`<div>${side}</div>` : ''}</div>${srcLine(s.source)}`;
+  },
+  hostActions: { play(el, c) { c.local.play = true; c.render(); }, stop(el, c) { c.local.play = false; c.render(); } },
+  student: (d) => html`<div class="card anim lookfront">${ic('monitor')}<div><h3>Das Video läuft vorne</h3><p>Schau zum Beamer${(d.tasks || []).length ? ' und achte auf die Fragen unten' : ''}.</p></div></div>${videoSide(d, 1)}`,
+};
+
 const GAP_RE = /(\[\[[^\]]+\]\])/g, isGap = (part) => /^\[\[[^\]]+\]\]$/.test(part);
 // Beamer: Lücken bleiben verdeckt, die Lehrkraft deckt zum Besprechen auf; darunter der Fortschritt der Klasse
 function gapHost(s, c) {
@@ -65,11 +93,13 @@ function gapHost(s, c) {
   const parts = String(s.text || '').split(GAP_RE).map((part) => {
     if (!isGap(part)) return md(part);
     i++;
-    if (!(st.all || st[i])) return html`<button class="gap" data-action="t:reveal" data-i="${i}" aria-label="Lösung zeigen">?</button>`;
+    if (!(st.all || st[i])) return c.print ? html`<span class="gap blank"></span>` : html`<button class="gap" data-action="t:reveal" data-i="${i}" aria-label="Lösung zeigen">?</button>`;
     const nw = !seen[i]; seen[i] = 1;
     return html`<span class="gap open${nw ? ' new' : ''}">${(alts[i] || []).join(' / ')}</span>`;
   });
-  return withChart(s.chart, c.key, html`${s.tip ? html`<div class="tip anim">${ic('bulb')}<span>${s.tip}</span></div>` : ''}<div class="filltext anim" style="--i:1">${parts}</div>
+  // Druck ohne Lösungen: Wortkasten wie auf den Geräten (Lösungswörter und zusätzliche Wörter, gemischt)
+  const bank = c.print && !st.all ? html`<div class="wordbank static anim">${shuffled([...alts.map((a) => a[0]), ...(s.extra || [])], `druck${s.id}`).map((w) => html`<span class="wchip">${w}</span>`)}</div>` : '';
+  return withChart(s.chart, c.key, html`${s.tip ? html`<div class="tip anim">${ic('bulb')}<span>${s.tip}</span></div>` : ''}<div class="filltext anim" style="--i:1">${parts}</div>${bank}
     <div class="bar"><button class="btn" data-action="t:revealAll">${ic('eye')}Alle Lösungen zeigen</button><span class="gapprog muted">Die Klasse zieht die Wörter aus dem Wortkasten in die Lücken.</span></div>`, s.source);
 }
 const gapHostActions = { reveal(el, c) { (c.local.gap || (c.local.gap = {}))[el.dataset.i] = true; c.render(); }, revealAll(el, c) { (c.local.gap || (c.local.gap = {})).all = true; c.render(); } };

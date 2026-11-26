@@ -27,6 +27,32 @@ function shapeOk(s, v) {
   }
 }
 
+// Nur gültige Antworten einer Folie übernehmen
+function cleanSubs(s, per) {
+  const clean = {};
+  if (isObj(per)) for (const [cid, v] of Object.entries(per)) if (okCid(cid) && shapeOk(s, v)) clean[cid] = v;
+  return clean;
+}
+
+// Auswertungen eines gespeicherten Stands ohne laufende Präsentation (für den PDF-Export „Mit Ergebnissen“).
+// Folien, die seit dem Stand inhaltlich geändert wurden, bleiben ohne Ergebnis; Quizfragen gelten als aufgelöst.
+// Die Rangliste fehlt, weil Spitznamen in keinem Stand gespeichert werden.
+export function stateAggs(lesson, d, { extraWords = [] } = {}) {
+  const subs = isObj(d && d.subs) ? d.subs : {}, fps = isObj(d && d.fingerprints) ? d.fingerprints : {}, metas = isObj(d && d.meta) ? d.meta : {};
+  const aggs = {}, changed = [], cids = new Set(), now = Date.now();
+  for (const s of lesson.slides) {
+    const def = TYPES[s.type];
+    if (!def.aggregate || s.type === 'leaderboard' || !isObj(subs[s.id])) continue;
+    if (fps[s.id] && fps[s.id] !== fingerprint(s)) { changed.push(s.id); continue; }
+    const clean = cleanSubs(s, subs[s.id]);
+    if (!Object.keys(clean).length) continue;
+    Object.keys(clean).forEach((c) => cids.add(c));
+    const meta = { ...(isObj(metas[s.id]) ? metas[s.id] : {}), ...(s.type === 'quiz' ? { phase: 'revealed' } : {}) };
+    aggs[s.id] = def.aggregate(s, clean, { meta, now, extraWords });
+  }
+  return { aggs, online: cids.size, changed, name: String((d && d.name) || 'Stand').slice(0, 60), savedAt: String((d && d.savedAt) || '') };
+}
+
 export function createRooms({ io, store, extraWords = () => [] }) {
   let room = null;
   const sockS = () => io.sockets.adapter.rooms.get('s') || new Set();
@@ -126,9 +152,7 @@ export function createRooms({ io, store, extraWords = () => [] }) {
       if (!isObj(per)) continue;
       const s = slideOf(sid);
       if (!s) { room.orphans[sid] = per; if (fps[sid]) room.orphanFps[sid] = fps[sid]; continue; } // Folie gelöscht: im Stand behalten
-      const clean = {};
-      for (const [cid, v] of Object.entries(per)) if (okCid(cid) && shapeOk(s, v)) clean[cid] = v;
-      room.subs[sid] = clean;
+      room.subs[sid] = cleanSubs(s, per);
       if (fps[sid] && fps[sid] !== fingerprint(s)) room.changed.push(sid);
     }
     if (isObj(d.meta)) for (const [sid, m] of Object.entries(d.meta)) if (slideOf(sid) && isObj(m)) room.meta[sid] = m;

@@ -34,6 +34,59 @@ export const info = {
   toStudent: (s) => ({ title: s.title, cards: s.cards, chart: s.chart, source: s.source }),
 };
 
+// ---------- Video ----------
+// Zeitangabe „1:30“, „90“, „1m30s“ oder „1h2m3s“ → Sekunden (0 = keine)
+export function parseTime(t) {
+  const s = String(t ?? '').trim().toLowerCase();
+  if (!s) return 0;
+  if (/^\d+(:\d{1,2}){1,2}$/.test(s)) return s.split(':').reduce((n, x) => n * 60 + +x, 0);
+  const m = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/.exec(s);
+  return m && (m[1] || m[2] || m[3]) ? (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0) : 0;
+}
+export const fmtTime = (sec) => (sec >= 3600 ? `${Math.floor(sec / 3600)}:${String(Math.floor((sec % 3600) / 60)).padStart(2, '0')}` : `${Math.floor(sec / 60)}`) + `:${String(sec % 60).padStart(2, '0')}`;
+// Adresse verstehen: YouTube (wird über youtube-nocookie eingebettet), direkte Videodatei oder sonstiger Link (nur „im Browser öffnen“)
+export function videoInfo(url, start, end) {
+  let u;
+  try { u = new URL(String(url || '').trim()); } catch { return { kind: 'none', url: '', host: '' }; }
+  if (!/^https?:$/.test(u.protocol)) return { kind: 'none', url: '', host: '' };
+  const host = u.hostname.replace(/^www\.|^m\./, '');
+  let id = '';
+  if (host === 'youtu.be') id = u.pathname.slice(1).split('/')[0];
+  else if (/^(youtube\.com|youtube-nocookie\.com|music\.youtube\.com)$/.test(host)) id = u.pathname === '/watch' ? u.searchParams.get('v') || '' : (/^\/(?:embed|shorts|live|v)\/([^/?#]+)/.exec(u.pathname) || [])[1] || '';
+  const from = parseTime(start) || parseTime(u.searchParams.get('t') || u.searchParams.get('start')), to = parseTime(end);
+  if (/^[\w-]{6,20}$/.test(id)) {
+    const q = new URLSearchParams({ rel: '0', modestbranding: '1' });
+    if (from) q.set('start', String(from));
+    if (to > from) q.set('end', String(to));
+    return { kind: 'youtube', id, url: u.href, host: 'YouTube', from, to, embed: `https://www.youtube-nocookie.com/embed/${id}?${q}`, watch: `https://www.youtube.com/watch?v=${id}${from ? `&t=${from}s` : ''}` };
+  }
+  if (/\.(mp4|webm|ogv|ogg|m4v|mov)$/i.test(u.pathname)) return { kind: 'file', url: u.href, host, from, to, src: `${u.href.split('#')[0]}${from || to > from ? `#t=${from}${to > from ? `,${to}` : ''}` : ''}`, watch: u.href };
+  return { kind: 'link', url: u.href, host, from, to, watch: u.href };
+}
+
+export const video = {
+  type: 'video', label: 'Video', icon: 'play', group: 'Inhalt',
+  desc: 'Video am Beamer mit Beobachtungsaufträgen für die Klasse. „url“ ist die Adresse des Videos (YouTube-Link oder direkte Adresse einer Videodatei) – genau so übernehmen, wie sie vorgegeben wurde, niemals eine Adresse erfinden oder verändern. Die Geräte der Klasse zeigen nur die Aufträge, nicht das Video.',
+  fields: [F.title,
+    { key: 'url', kind: 'text', label: 'Adresse des Videos (z. B. YouTube-Link)', max: 400, required: true },
+    { key: 'start', kind: 'text', label: 'Beginn (z. B. 1:30)', max: 10, optional: true },
+    { key: 'end', kind: 'text', label: 'Ende (z. B. 4:05)', max: 10, optional: true },
+    { key: 'intro', kind: 'textarea', label: 'Worum geht es? (kurz)', max: 300, optional: true },
+    { key: 'tasks', kind: 'strlist', label: 'Beobachtungsaufträge (während des Videos)', max: 6, itemMax: 200, optional: true },
+    F.discussion, F.source, F.notes],
+  sample: { type: 'video', title: 'Video: Der Weg des Wassers', url: 'https://www.youtube.com/watch?v=VIDEO_ID', intro: 'Ein kurzer Film über den Wasserkreislauf.', tasks: ['Welche drei Stationen durchläuft das Wasser?', 'Was treibt den Kreislauf an?'] },
+  fresh: { title: 'Video', url: '', intro: '', tasks: ['Worum geht es in dem Video?'] }, // neue Folie im Editor: ohne Beispiel-Adresse
+  repair(s, r, p) {
+    if (s.url && !/^[a-z][a-z0-9+.-]*:\/\//i.test(s.url)) s.url = 'https://' + s.url.replace(/^\/+/, '');
+    const v = videoInfo(s.url);
+    if (v.kind === 'none') r.error(`${p}: Die Adresse des Videos ist ungültig (sie muss mit https:// beginnen)`);
+    else if (v.kind === 'youtube' && v.id === 'VIDEO_ID') r.note(`${p}: Platzhalter statt einer echten Video-Adresse – bitte im Editor die richtige Adresse eintragen`);
+    else if (v.kind === 'link') r.note(`${p}: Dieses Video lässt sich nicht einbetten – die Folie bietet „Im Browser öffnen“ an`);
+    for (const k of ['start', 'end']) if (s[k]) { const n = parseTime(s[k]); if (n) s[k] = fmtTime(n); else { r.note(`${p}: Zeitangabe „${s[k]}“ nicht verstanden und entfernt`); delete s[k]; } }
+  },
+  toStudent: (s) => ({ title: s.title, intro: s.intro, tasks: s.tasks || [], discussion: s.discussion }),
+};
+
 // Lücken eines Textes: je Lücke die Liste der gültigen Lösungen ([[Fahrrad|Rad]] → ['Fahrrad', 'Rad'])
 export const gapAlts = (text) => [...String(text || '').matchAll(/\[\[([^\]]+)\]\]/g)].map((m) => m[1].split('|').map((x) => x.trim()).filter(Boolean)).filter((x) => x.length);
 

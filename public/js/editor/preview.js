@@ -17,7 +17,10 @@ let M = null; // { lesson, slideId, mode: 'host'|'student', demo, joinUrl }
 // Eigene Bilder kommen nur bei Änderungen mit (media + mediaRev), damit das Tippen schnell bleibt
 let MEDIA = {}, mediaRev = -1;
 const URLS = {};
-const mediaUrl = (id) => { const m = MEDIA[id]; if (!m) return ''; const k = `${id}|${m.data.length}`; return URLS[k] || (URLS[k] = `data:${m.mime};base64,${m.data}`); };
+// Druck (PDF-Export, /preview?print=1): ohne Animationen und Bedienelemente; eigene Bilder kommen direkt vom Server
+const PRINT = /[?&]print=1/.test(location.search);
+if (PRINT) document.body.classList.add('print');
+const mediaUrl = (id) => { if (PRINT) return M && M.lesson ? `/media/${M.lesson.id}/${id}` : ''; const m = MEDIA[id]; if (!m) return ''; const k = `${id}|${m.data.length}`; return URLS[k] || (URLS[k] = `data:${m.mime};base64,${m.data}`); };
 let shownKey = '', content = null, frameMode = '';
 const prefs = {}, local = {};
 const N = 14;
@@ -108,7 +111,8 @@ function render() {
   frame(M.mode);
   const { s, i } = current(), L = M.lesson, R = RENDER[s.type];
   if (!R) return;
-  const sec = L.sections.find((x) => x.id === s.section) || L.sections[0], col = applyTheme(document.getElementById('app'), L.theme, colorOf(sec.color));
+  const P = PRINT ? M.print || { variant: 'blank' } : null, theme = (P && P.theme) || L.theme;
+  const sec = L.sections.find((x) => x.id === s.section) || L.sections[0], col = applyTheme(document.getElementById('app'), theme, colorOf(sec.color));
   const key = `${M.mode}|${s.id}|${M.demo}`, fresh = key !== shownKey;
   shownKey = key;
   document.getElementById('hsec').innerHTML = String(html`${ic(sec.icon)}<span>${sec.name}</span>`);
@@ -126,12 +130,19 @@ function render() {
       body = hidden ? lookUp() : R.student ? R.student(c.p.data, c) : html`<div class="card">${s.title}</div>`;
       content.innerHTML = String(withGraphic(s.type === 'title' || hidden ? '' : shead(s.title, secCol), body, s.type === 'title' || hidden ? null : c.p.graphic));
     } else {
-      const D = M.demo ? demo(s) : { agg: null, online: 0 };
+      const D = P ? { agg: P.agg || null, online: P.online || 0 } : M.demo ? demo(s) : { agg: null, online: 0 };
       const pr = prefs[s.id] || (prefs[s.id] = {});
       if (M.demo && ['mc', 'truefalse', 'sort'].includes(s.type) && pr.eval === undefined) pr.eval = true;
       if (!M.demo && fresh) pr.eval = false;
       const c = { lesson: L, sec: secCol, agg: D.agg, prefs: pr, local: local[s.id] || (local[s.id] = {}), key: 'c', online: D.online, joinUrl: M.joinUrl || '',
-        next: L.slides[i + 1], render: () => render(), goto: () => {}, theme: L.theme || 'standard', mediaUrl };
+        next: L.slides[i + 1], render: () => render(), goto: () => {}, theme: theme || 'standard', mediaUrl };
+      if (P) {
+        // Druck: mit Ergebnissen die Auswertung, mit Lösungen die markierten Antworten, sonst nur die Fragen
+        const has = !!D.agg && ((D.agg.n || 0) > 0 || (D.agg.students || 0) > 0 || (D.agg.ranking || []).length > 0);
+        pr.eval = has && ['mc', 'truefalse', 'sort'].includes(s.type);
+        Object.assign(c, { print: true, solution: P.variant !== 'blank', results: has, date: P.date || null });
+        if (c.solution) c.local.gap = { all: true };
+      }
       body = R.host(s, c);
       content.innerHTML = String(withGraphic(s.type === 'title' ? '' : shead(s.title, secCol), body, s.type === 'title' ? null : s.graphic, mediaUrl));
     }
@@ -139,10 +150,22 @@ function render() {
     console.error(e);
     content.innerHTML = String(html`<div class="wrap"><div class="warn">${ic('alert')}<span>Diese Folie kann noch nicht angezeigt werden – bitte die markierten Felder prüfen.</span></div></div>`);
   }
-  content.classList.toggle('enter', fresh);
+  content.classList.toggle('enter', fresh && !PRINT);
   if (R.flip && snap) R.flip(content, snap);
   fit(content);
   animWidths(content);
+}
+
+// Druck: warten, bis Schriften und Bilder da sind, dann noch einmal zeichnen (die Wortwolke misst Text) und „fertig“ melden
+async function settle(slideId) {
+  const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
+  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch { /* ohne Schrift-API weiter */ }
+  render();
+  await Promise.all([...document.images].map((img) => (img.complete ? null : new Promise((r) => { img.onload = img.onerror = r; setTimeout(r, 8000); }))));
+  await frame(); await frame();
+  fit(content);
+  await frame(); await frame(); // animWidths() setzt die Balkenbreiten im nächsten Frame
+  window.parent.postMessage({ type: 'printed', slideId, over: content ? content.scrollHeight - content.clientHeight : 0 }, location.origin);
 }
 
 // Bedienelemente der Folie funktionieren auch in der Vorschau (z. B. Diagrammart, Lücken aufdecken, Labor)
@@ -169,6 +192,7 @@ window.addEventListener('message', (e) => {
   if (e.data.media && e.data.mediaRev !== mediaRev) { MEDIA = e.data.media; mediaRev = e.data.mediaRev; }
   M = e.data;
   render();
+  if (PRINT) settle(M.slideId);
 });
 window.addEventListener('resize', () => { if (content) fit(content); });
 window.parent.postMessage({ type: 'preview-ready' }, location.origin);

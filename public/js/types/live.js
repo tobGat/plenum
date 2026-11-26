@@ -16,6 +16,14 @@ export const poll = {
   host(s, c) {
     const v = c.prefs; if (!v.type) v.type = s.multi ? 'hbar' : 'bar';
     const a = c.agg || { counts: {}, n: 0 }, A = a.A || { counts: {}, n: 0 }, B = a.B || { counts: {}, n: 0 };
+    // Druck (PDF) ohne Ergebnisse: Frage und Antwortmöglichkeiten als Liste statt eines leeren Diagramms
+    if (c.print && !c.results) {
+      const qs = s.splitA ? html`<div class="grid2">${[[s.splitLabelA || 'Frage A', s.splitA], [s.splitLabelB || 'Frage B', s.splitB]].map(([lab, q], j) => html`<div class="card qcmp" style="--qc:${j ? c.sec.c : cmpColor(c.sec.c)}"><div class="qlab">${lab}</div><p>„${q}“</p></div>`)}</div>` : html`<div class="qbox anim">${md(s.question || s.title)}</div>`;
+      return html`${qs}${s.hint ? html`<div class="tip anim">${ic('vote')}<span>${s.hint}</span></div>` : ''}
+        <div class="opts printopts">${s.options.map((o, i) => html`<div class="opt static"><span class="bd pbox${s.multi ? '' : ' round'}"></span><span class="ot">${o}</span></div>`)}</div>
+        ${s.multi && !s.hint ? html`<div class="note">${ic('vote')}<span>Mehrfachnennung möglich.</span></div>` : ''}${discussion(s)}`;
+    }
+    if (c.print && c.results && s.splitA && a.n > 0) v.reveal = true; // beide Fragevarianten nebeneinander zeigen
     const cnt = s.options.map((_, i) => a.counts[i] || 0), base = a.n, canPct = base > 0, rev = !!s.splitA && !!v.reveal && canPct;
     const usePct = (v.pct || v.cmp || rev) && canPct, vals = usePct ? cnt.map((x) => Math.round((x / base) * 1000) / 10) : cnt;
     const pctOf = (X, i) => (X.n ? Math.round(((X.counts[i] || 0) / X.n) * 1000) / 10 : 0);
@@ -36,7 +44,7 @@ export const poll = {
     const left = html`<div class="toolbar">${c.joinUrl ? html`<button class="joinhint" data-action="join">${ic('wifi')}${c.joinUrl}</button>` : ''}<div class="segctl">${sb('bar', 'Säulen', 'bars')}${sb('hbar', 'Balken', 'hbars')}${sb('pie', 'Kreis', 'pie', s.multi || rev)}</div>
       ${tg(usePct, !canPct || rev, 'pct', 'in Prozent')}${s.compareValues ? tg(v.cmp, !canPct, 'cmp', s.compareName ? `Vergleich: ${s.compareName}` : 'Vergleich') : ''}${type === 'bar' ? tg(v.cut && canCut, !canCut, 'cut', 'y-Achse kürzen', 'red') : ''}${s.splitA ? tg(rev, !canPct, 'reveal', 'Gruppen vergleichen') : ''}</div>
       <div class="chartbox anim"><h4>${s.question || s.title}<span class="unit">${usePct ? (rev ? 'Angaben in % der jeweiligen Gruppe' : 'Angaben in %') : 'Anzahl der Stimmen'}</span>${ymin !== undefined ? html`<span class="unit cut">y-Achse beginnt bei ${fmt(ymin)}!</span>` : ''}</h4>${raw(chart)}
-      <div class="src">Quelle: Abstimmung in unserer Klasse, ${new Date().toLocaleDateString('de-AT')}${s.multi ? ', Mehrfachnennung möglich' : ''}, ${base} Befragte.${rev ? ' Zwei Gruppen mit unterschiedlicher Fragestellung.' : ''}${s.compareValues && v.cmp && s.compareSource ? ` Vergleich: ${s.compareSource}` : ''}</div></div>`;
+      <div class="src">Quelle: Abstimmung in unserer Klasse, ${(c.date ? new Date(c.date) : new Date()).toLocaleDateString('de-AT')}${s.multi ? ', Mehrfachnennung möglich' : ''}, ${base} Befragte.${rev ? ' Zwei Gruppen mit unterschiedlicher Fragestellung.' : ''}${s.compareValues && v.cmp && s.compareSource ? ` Vergleich: ${s.compareSource}` : ''}</div></div>`;
     let right = html`<div class="card part anim" style="--i:1">${ring(c.online ? base / c.online : base ? 1 : 0, `vt:${s.id}`, 78)}<div><div class="part-n">${base}<small> von ${c.online}</small></div><div class="part-l">haben abgestimmt</div></div></div>`;
     if (rev) right = html`${right}${[['A', s.splitA, A, cmpColor(c.sec.c), s.splitLabelA || 'Frage A'], ['B', s.splitB, B, c.sec.c, s.splitLabelB || 'Frage B']].map(([g, q, X, col, lab], j) => html`<div class="card qcmp anim" style="--i:${2 + j};--qc:${col}"><div class="qlab">${lab} · ${X.n} Befragte</div><p>„${q}“</p></div>`)}`;
     else if (s.hint) right = html`${right}<div class="note anim" style="--i:2">${ic('vote')}<span>${s.hint}</span></div>`;
@@ -62,14 +70,19 @@ const stepColor = (k, steps) => `color-mix(in srgb, var(--c) ${Math.round(18 + (
 export const scale = {
   host(s, c) {
     const a = c.agg || { items: [], students: 0 };
+    // Druck (PDF) ohne Ergebnisse: Aussagen mit leerer Skala zum Ankreuzen
+    if (c.print && !c.results) {
+      return html`${s.question ? html`<div class="qbox anim">${md(s.question)}</div>` : ''}<div class="esum sr-sum"><span></span><span class="sr-key"><b>1</b> = ${s.minLabel}<i>…</i><b>${s.steps}</b> = ${s.maxLabel}</span></div>
+        <div class="scalerows">${s.statements.map((st) => html`<div class="scalerow card"><div class="sr-h"><span class="sr-t">${st}</span></div><div class="sr-boxes">${Array.from({ length: s.steps }, (_, k) => html`<span class="sr-box">${k + 1}</span>`)}</div></div>`)}</div>${discussion(s, s.statements.length + 2)}`;
+    }
     const rows = s.statements.map((st, i) => {
       const x = a.items[i] || { counts: {}, n: 0, mean: null }, m = x.mean;
       return html`<div class="scalerow card anim" style="--i:${i + 1}"><div class="sr-h"><span class="sr-t">${st}</span><span class="sr-m">${m == null ? '–' : fmt(m)}<small>Ø · n = ${x.n}</small></span></div>
         <div class="sr-track"><div class="wbar" data-w="${m == null ? 0 : (((m - 1) / (s.steps - 1)) * 100).toFixed(1)}" style="width:0%"></div>${Array.from({ length: s.steps }, (_, k) => html`<span class="sr-tick" style="left:${(k / (s.steps - 1)) * 100}%">${k + 1}</span>`)}</div>
-        <div class="ebar sr-dist">${Array.from({ length: s.steps }, (_, k) => seg(`${s.id}|${i}|${k}`, x.counts[k + 1] || 0, x.n, stepColor(k, s.steps), String(k + 1)))}</div>
-        <div class="sr-lab"><span>1 = ${s.minLabel}</span><span>${s.steps} = ${s.maxLabel}</span></div></div>`;
+        <div class="ebar sr-dist">${Array.from({ length: s.steps }, (_, k) => seg(`${s.id}|${i}|${k}`, x.counts[k + 1] || 0, x.n, stepColor(k, s.steps), String(k + 1), k / Math.max(1, s.steps - 1) < 0.5 ? 'lt' : '', ': '))}</div></div>`;
     });
-    return html`${s.question ? html`<div class="qbox anim">${md(s.question)}</div>` : ''}<div class="esum anim">${a.students} ${a.students === 1 ? 'Person hat' : 'Personen haben'} bewertet</div><div class="scalerows">${rows}</div>${discussion(s, s.statements.length + 2)}`;
+    // Die Bedeutung der Skala steht einmal oben statt unter jeder Aussage – so bleibt mehr Platz für große Schrift
+    return html`${s.question ? html`<div class="qbox anim">${md(s.question)}</div>` : ''}<div class="esum sr-sum anim"><span>${a.students} ${a.students === 1 ? 'Person hat' : 'Personen haben'} bewertet</span><span class="sr-key"><b>1</b> = ${s.minLabel}<i>…</i><b>${s.steps}</b> = ${s.maxLabel}</span></div><div class="scalerows">${rows}</div>${discussion(s, s.statements.length + 2)}`;
   },
   student(d, c) {
     const vals = c.local.vals || (c.local.vals = d.mine ? d.mine.slice() : d.statements.map(() => null));
@@ -91,6 +104,7 @@ const modItem = (key, text, x) => html`<button class="modchip${x.visible ? ' vis
 export const wordcloud = {
   host(s, c) {
     const a = c.agg || { words: [], students: 0 }, vis = a.words.filter((w) => w.visible), pending = a.words.length - vis.length;
+    if (c.print && !vis.length) return html`<div class="qbox anim">${md(s.question)}</div><div class="printbox"></div>${discussion(s, 3)}`; // Druck ohne Begriffe: Platz zum Sammeln
     return html`<div class="qbox anim">${md(s.question)}</div><div class="cloudbox anim">${raw(cloudSvg(vis))}</div>${modBar(s, a, 'Begriffe', vis.length, pending)}
       ${c.prefs.mod ? html`<div class="modlist anim">${a.words.length ? a.words.map((w) => modItem(w.key, w.text, w)) : html`<span class="muted">Noch keine Begriffe.</span>`}</div>` : discussion(s, 3)}`;
   },
@@ -109,6 +123,7 @@ export const wordcloud = {
 export const open = {
   host(s, c) {
     const a = c.agg || { items: [], students: 0 }, vis = a.items.filter((x) => x.visible), pending = a.items.length - vis.length;
+    if (c.print && !vis.length) return html`<div class="qbox anim">${md(s.question)}</div><div class="printbox lines"></div>${discussion(s, 3)}`; // Druck ohne Antworten: Schreiblinien
     return html`<div class="qbox anim">${md(s.question)}</div>
       <div class="wall anim">${vis.length ? vis.map((x, i) => html`<div class="wcard" style="--i:${i % 12}">${x.text}</div>`) : html`<div class="wall-empty">${a.items.length ? 'Antworten sind eingegangen – sie erscheinen nach der Freigabe.' : 'Noch keine Antworten.'}</div>`}</div>
       ${modBar(s, a, 'Antworten', vis.length, pending)}${c.prefs.mod ? html`<div class="modlist anim">${a.items.map((x) => modItem(x.id, x.text, x))}</div>` : discussion(s, 3)}`;

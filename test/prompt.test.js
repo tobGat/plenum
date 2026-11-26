@@ -1,7 +1,8 @@
 // KI-Prompt: enthält Vorgaben und nur die gewählten Typen; Beispiel und Vorlage sind gültige Lektionen
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPrompt, buildRevisePrompt, templateJson, exampleLesson, DEFAULT_TYPES } from '../shared/prompt.js';
+import { buildPrompt, buildRevisePrompt, templateJson, exampleLesson, DEFAULT_TYPES, parseVideos } from '../shared/prompt.js';
+import { videoInfo, parseTime } from '../shared/types/content.js';
 import { normalizeLesson } from '../shared/schema.js';
 import { TYPE_LIST } from '../shared/types/index.js';
 import { parseLessonText } from '../server/aiimport.js';
@@ -44,6 +45,41 @@ test('Material: Hinweis im Prompt, Buch-Aufträge als eigene Folie, Thema option
   assert.doesNotMatch(o, /"task" – /);
   assert.doesNotMatch(buildPrompt({ topic: 'X' }), /MATERIAL:/, 'ohne Material kein Abschnitt');
   assert.match(templateJson({ types: ['mc'], count: 5, material })._anleitung, /weiteren angehängten Dateien \(Buch S\. 40–42, Ü2–Ü4\)/);
+});
+
+test('Videos: Links aus dem Formular, eigener Abschnitt im Prompt, Video-Folie nur mit vorgegebenen Links', () => {
+  const vids = parseVideos('1. https://www.youtube.com/watch?v=abc123XYZ00 – nur bis Minute 3\nkein Link\nyoutu.be/def456UVW11\nhttps://www.youtube.com/watch?v=abc123XYZ00');
+  assert.deepEqual(vids, [{ url: 'https://www.youtube.com/watch?v=abc123XYZ00', note: 'nur bis Minute 3' }, { url: 'https://youtu.be/def456UVW11', note: '' }]);
+  const p = buildPrompt({ topic: '', types: ['mc'], videos: vids });
+  assert.match(p, /THEMA: siehe Videos/);
+  assert.match(p, /VIDEOS:\nDiese Videos sollen in der Stunde vorkommen:\n1\. https:\/\/www\.youtube\.com\/watch\?v=abc123XYZ00 – nur bis Minute 3\n2\. https:\/\/youtu\.be\/def456UVW11/);
+  assert.match(p, /erfinde nichts über seinen Inhalt/);
+  assert.match(p, /"video" – Video/);
+  assert.ok(p.includes('"url":"https://www.youtube.com/watch?v=abc123XYZ00"'), 'Beispiel nennt die echte Adresse');
+  assert.doesNotMatch(p, /VIDEO_ID/);
+  const none = buildPrompt({ topic: 'X', types: ['mc', 'video'] });
+  assert.doesNotMatch(none, /"video" – |VIDEOS:/, 'ohne Links keine Video-Folien');
+  assert.doesNotMatch(buildPrompt({ topic: 'X' }), /"video" – /, 'auch in der Standardauswahl nicht');
+  const L = normalizeLesson(exampleLesson(['title', 'mc']), {}).lesson;
+  const rp = buildRevisePrompt({ lesson: L, videos: vids.slice(0, 1) });
+  assert.match(rp, /ÄNDERUNGSWUNSCH: Baue das Video in die Lektion ein\./);
+  assert.match(rp, /"video" – Video/);
+  assert.match(templateJson({ types: ['mc'], videos: vids })._anleitung, /Typ "video" ein \(Adresse unverändert\): https:\/\/www\.youtube\.com\/watch\?v=abc123XYZ00, https:\/\/youtu\.be\/def456UVW11/);
+});
+
+test('Video-Adressen: YouTube-Formen, Ausschnitt, Datei, fremde Seite, Ungültiges', () => {
+  const a = videoInfo('https://www.youtube.com/watch?v=abc123XYZ00&t=1m30s', '', '4:05');
+  assert.equal(a.kind, 'youtube'); assert.equal(a.id, 'abc123XYZ00'); assert.equal(a.from, 90); assert.equal(a.to, 245);
+  assert.equal(a.embed, 'https://www.youtube-nocookie.com/embed/abc123XYZ00?rel=0&modestbranding=1&start=90&end=245');
+  for (const u of ['https://youtu.be/abc123XYZ00', 'https://m.youtube.com/shorts/abc123XYZ00', 'https://www.youtube.com/embed/abc123XYZ00', 'https://www.youtube.com/live/abc123XYZ00?si=x']) assert.equal(videoInfo(u).id, 'abc123XYZ00', u);
+  assert.equal(videoInfo('https://youtu.be/abc123XYZ00', '2:00').from, 120, 'Feld „Beginn“ geht vor');
+  assert.equal(videoInfo('https://schule.example/film.mp4', '0:10', '0:20').src, 'https://schule.example/film.mp4#t=10,20');
+  assert.equal(videoInfo('https://vimeo.com/12345').kind, 'link');
+  for (const u of ['', 'javascript:alert(1)', 'file:///C:/x.mp4', 'kein link']) assert.equal(videoInfo(u).kind, 'none', u);
+  assert.equal(parseTime('1:02:03'), 3723); assert.equal(parseTime('90'), 90); assert.equal(parseTime('abc'), 0);
+  const r = normalizeLesson({ title: 'T', slides: [{ type: 'youtube', title: 'V', url: 'youtu.be/abc123XYZ00', start: '90', end: 'später' }, { type: 'video', title: 'X', url: 'javascript:alert(1)' }] }, {});
+  assert.equal(r.lesson.slides.length, 1);
+  assert.deepEqual([r.lesson.slides[0].type, r.lesson.slides[0].url, r.lesson.slides[0].start, r.lesson.slides[0].end], ['video', 'https://youtu.be/abc123XYZ00', '1:30', undefined]);
 });
 
 test('Beispiel und Vorlage sind gültige Lektionen (alle Typen)', () => {

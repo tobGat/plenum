@@ -9,12 +9,13 @@ import { Server } from 'socket.io';
 import compression from 'compression';
 import QRCode from 'qrcode';
 import { createStore } from './store.js';
-import { createRooms } from './rooms.js';
+import { createRooms, stateAggs } from './rooms.js';
 import { parseImport } from './aiimport.js';
 import { normalizeLesson, withNewIds } from '../shared/schema.js';
 import { slug, isObj } from '../shared/util.js';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
+const CSP_HOST = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' ws: wss:; frame-src 'self' https://www.youtube-nocookie.com; media-src 'self' https: http:; frame-ancestors 'self'; object-src 'none'; base-uri 'none'; form-action 'self'";
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' ws: wss:; frame-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'none'; form-action 'self'";
 
 // IPv4-Adressen im lokalen Netz, echte Adapter (WLAN/LAN) zuerst
@@ -51,9 +52,13 @@ export async function startServer(opts) {
   app.disable('x-powered-by');
   app.use(compression());
   app.use((req, res, next) => { res.set({ 'Content-Security-Policy': CSP, 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' }); next(); });
-  const page = (f) => (req, res) => res.sendFile(path.join(ROOT, 'public', f), { headers: { 'Cache-Control': 'no-store' } });
-  app.get('/host', (req, res, next) => (isLoop(req.socket.remoteAddress) && hostOk(req.headers.host) ? next() : res.redirect('/')), page('host.html'));
-  app.get('/preview', (req, res, next) => (authed(req.headers, req.socket.remoteAddress) ? next() : res.status(403).end()), page('preview.html'));
+  const page = (f, headers = {}) => (req, res) => res.sendFile(path.join(ROOT, 'public', f), { headers: { 'Cache-Control': 'no-store', ...headers } });
+  // Nur die Seiten der Lehrkraft dürfen Videos einbetten (Video-Folie): YouTube über youtube-nocookie und direkte Videodateien.
+  // Die Seite der Klasse behält die strenge Richtlinie – Schülergeräte laden nie etwas aus dem Internet.
+  const hostPage = (f) => page(f, { 'Content-Security-Policy': CSP_HOST });
+  app.get('/host', (req, res, next) => (isLoop(req.socket.remoteAddress) && hostOk(req.headers.host) ? next() : res.redirect('/')), hostPage('host.html'));
+  app.get('/preview', (req, res, next) => (authed(req.headers, req.socket.remoteAddress) ? next() : res.status(403).end()), hostPage('preview.html'));
+  app.get('/print', (req, res, next) => (authed(req.headers, req.socket.remoteAddress) ? next() : res.status(403).end()), page('print.html'));
   app.get('/', page('index.html'));
   // Eingebettete Bilder einer Lektion: für die Lehrkraft immer, für die Klasse nur, solange diese Lektion präsentiert wird
   app.get('/media/:lessonId/:mediaId', (req, res) => {
@@ -97,6 +102,18 @@ export async function startServer(opts) {
     return store.remove(req.params.id) ? res.json({ ok: true }) : fail(res, 404, 'Lektion nicht gefunden');
   });
   api.get('/lessons/:id/export', (req, res) => { const L = store.get(req.params.id); return L ? download(res, `${slug(L.title)}.plenum`, L) : fail(res, 404, 'Lektion nicht gefunden'); });
+  // Auswertungen für den PDF-Export: gespeicherter Stand oder (_live) die laufende Präsentation dieser Lektion
+  api.get('/lessons/:id/results/:stateId', (req, res) => {
+    const { id, stateId } = req.params, L = store.get(id);
+    if (!L || !/^[\w-]{1,40}$/.test(stateId)) return fail(res, 404, 'Lektion oder Stand nicht gefunden');
+    if (stateId === '_live') {
+      if (presentingId() !== id) return fail(res, 404, 'Diese Lektion wird gerade nicht präsentiert.');
+      const st = rooms.hostState();
+      return res.json({ aggs: st.aggs, online: st.online, changed: st.changed || [], name: st.slot ? st.slot.name : 'Aktuelle Präsentation', savedAt: new Date().toISOString(), live: true });
+    }
+    const d = store.loadState(id, stateId);
+    return d ? res.json(stateAggs(L, d, { extraWords: store.settings.extraWords || [] })) : fail(res, 404, 'Stand nicht gefunden');
+  });
   api.get('/backup', (req, res) => download(res, `plenum-sicherung-${new Date().toISOString().slice(0, 10)}.json`, { format: 'plenum-sicherung', version: 1, createdAt: new Date().toISOString(), lessons: store.list().map((m) => store.get(m.id)).filter(Boolean) }));
   api.post('/import/parse', (req, res) => {
     const base = req.body?.baseLessonId ? store.get(String(req.body.baseLessonId)) : null; // Überarbeiten: Bilder der Lektion behalten

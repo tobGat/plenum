@@ -1,10 +1,10 @@
 // Registry aller Folientypen (Datenteil; Darstellung in public/js/types/)
-import { title, info, gap, lab, summary, sources } from './content.js';
+import { title, info, video, gap, lab, summary, sources } from './content.js';
 import { mc, truefalse, sort, task } from './exercises.js';
 import { poll, scale, wordcloud, open } from './live.js';
 import { quiz, leaderboard } from './quiz.js';
 
-export const TYPE_LIST = [title, info, mc, truefalse, sort, gap, task, poll, scale, wordcloud, open, quiz, leaderboard, lab, summary, sources];
+export const TYPE_LIST = [title, info, video, mc, truefalse, sort, gap, task, poll, scale, wordcloud, open, quiz, leaderboard, lab, summary, sources];
 export const TYPES = Object.fromEntries(TYPE_LIST.map((t) => [t.type, t]));
 export const GROUPS = ['Inhalt', 'Aufgaben', 'Live'];
 
@@ -12,6 +12,7 @@ export const GROUPS = ['Inhalt', 'Aufgaben', 'Live'];
 export const SYNONYMS = {
   titel: 'title', titelfolie: 'title', intro: 'title', start: 'title', cover: 'title',
   information: 'info', infofolie: 'info', text: 'info', erklaerung: 'info', content: 'info', cards: 'info',
+  film: 'video', clip: 'video', youtube: 'video', videoclip: 'video', movie: 'video',
   multiple_choice: 'mc', multiplechoice: 'mc', single_choice: 'mc', choice: 'mc', auswahl: 'mc', frage: 'mc',
   true_false: 'truefalse', richtig_falsch: 'truefalse', richtigfalsch: 'truefalse', wahr_falsch: 'truefalse', tf: 'truefalse',
   zuordnen: 'sort', zuordnung: 'sort', sorting: 'sort', categorize: 'sort', kategorien: 'sort', matching: 'sort',

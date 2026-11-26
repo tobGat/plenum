@@ -132,7 +132,7 @@ export function createPresenter({ root, socket, api, info, onExit }) {
       overlay(html`<div class="ov-ic">${ic('save')}</div><h2>Stand speichern</h2><p class="ov-sub">Sichert Folie, Abstimmungen und Ergebnisse – zum Beispiel für jede Klasse einen eigenen Stand. Mit Namen wird danach laufend automatisch gespeichert.</p>
         <form class="saveform" data-action="saveState"><input class="field" name="n" maxlength="40" required placeholder="Name, z. B. Klasse 4a" value="${S.slot ? S.slot.name : ''}" aria-label="Name des Stands"><button class="btn primary">${ic('save')}Speichern</button></form>
         <div class="slots-h">Gespeicherte Stände dieser Lektion</div><div class="slots">${rows.length ? rows : html`<div class="slot-empty">Noch keine gespeicherten Stände.</div>`}</div>
-        <div class="ov-actions"><button class="btn" data-action="clearRoom">${ic('plus')}Neu beginnen</button><button class="btn" data-action="close">Schließen</button></div>`, { wide: true });
+        <div class="ov-actions"><button class="btn" data-action="clearRoom">${ic('plus')}Neu beginnen</button><button class="btn" data-action="pdfResults" title="Folien mit den Ergebnissen dieser Stunde als PDF speichern">${ic('file')}Ergebnisse als PDF</button><button class="btn" data-action="close">Schließen</button></div>`, { wide: true });
     });
   }
   const applyState = (r) => { if (r && r.presenting !== undefined) { const keepId = r.slideId; S = { ...S, ...r }; S.slideId = keepId; for (const k in local) delete local[k]; lastId = null; render(); } };
@@ -142,6 +142,7 @@ export function createPresenter({ root, socket, api, info, onExit }) {
     sec: (el) => { const f = S.lesson.slides.find((x) => x.section === el.dataset.id); if (f) goto(f.id); },
     sync: () => { S.sync = !S.sync; socket.emit('host:sync', S.sync); renderRoom(); },
     join: showJoin, states: showStates, close: closeOv, full: toggleFull,
+    pdfResults: async () => { closeOv(); const { showPdfExport } = await import('../editor/pdf.js'); showPdfExport({ api, lessonId: S.lesson.id, title: S.lesson.title, live: true, preset: { variant: 'results', state: '_live' } }); },
     copy: async (el) => { if (await copyText(joinUrl())) el.innerHTML = String(html`${ic('check')}Kopiert`); else toast('Kopieren nicht möglich – den Link bitte abschreiben', 'err'); },
     testStudent: () => { window.open(`http://127.0.0.1:${info.port}/`, '_blank', 'width=420,height=860'); },
     moderation: () => { window.open('/host#/moderation', 'plenum-moderation', 'width=1100,height=760'); },

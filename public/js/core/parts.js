@@ -83,12 +83,13 @@ export const resetRings = (prefix) => { for (const k in RING) if (k.endsWith(pre
 
 // Antwort-Balken (Auswertung); Breite gleitet per animWidths()
 const WPREV = {};
-export function seg(key, v, n, color, label) {
+// cls: Zusatzklasse (z. B. „lt“ für dunkle Schrift auf hellem Balken); sep: Trenner zwischen Beschriftung und Prozentwert
+export function seg(key, v, n, color, label, cls = '', sep = ' ') {
   const p = n ? (v / n) * 100 : 0, from = WPREV[key] || 0;
   WPREV[key] = p;
   if (!p) return '';
   const pc = Math.round(p);
-  return raw(`<div class="seg" data-w="${p.toFixed(2)}" style="width:${from.toFixed(2)}%;background:${color}" title="${esc(label || '')}${label ? ': ' : ''}${v} von ${n} (${pc} %)">${p >= 11 && label ? `${esc(label)} ${pc} %` : p >= 6 ? `${pc} %` : ''}</div>`);
+  return raw(`<div class="seg${cls ? ' ' + cls : ''}" data-w="${p.toFixed(2)}" style="width:${from.toFixed(2)}%;background:${color}" title="${esc(label || '')}${label ? ': ' : ''}${v} von ${n} (${pc} %)">${p >= 11 && label ? `${esc(label)}${sep}${pc} %` : p >= 6 ? `${pc} %` : ''}</div>`);
 }
 export const resetSegs = (prefix) => { for (const k in WPREV) if (k.startsWith(prefix)) delete WPREV[k]; };
 export function animWidths(root = document) {

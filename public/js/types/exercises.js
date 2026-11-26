@@ -2,6 +2,7 @@
 import { html, md, richLines, fmt, pct } from '../core/dom.js';
 import { ic } from '../core/icons.js';
 import { withChart, fb, ring, seg, eRow, OKC, NOCS, srcLine } from '../core/parts.js';
+import { shuffled } from '/shared/types/common.js';
 
 const L6 = 'ABCDEF';
 // Auswertung als Balkenzeilen (nur Lehrkraft)
@@ -10,7 +11,7 @@ function evalBox(s, c, rows, legend) {
   return html`<div class="chartbox evalbox anim${s.chart ? ' stack' : ''}"><div class="ev-h">${ic('bars')}<h4>Auswertung: So hat die Klasse geantwortet</h4></div>
     <div class="esum">${students ? `${students} ${students === 1 ? 'Person hat' : 'Personen haben'} geantwortet${avg ? ` · im Schnitt ${avg} % richtig` : ''}` : 'Noch keine Antworten. Das Diagramm füllt sich live, sobald die Klasse arbeitet.'}</div>
     <div class="elg">${legend}</div><div class="erows${rows.length >= 7 && !s.chart ? ' cols' : ''}">${rows}</div>
-    <div class="src">Quelle: Übung in unserer Klasse, ${new Date().toLocaleDateString('de-AT')}, ${students} Teilnehmende.</div></div>`;
+    <div class="src">Quelle: Übung in unserer Klasse, ${(c.date ? new Date(c.date) : new Date()).toLocaleDateString('de-AT')}, ${students} Teilnehmende.</div></div>`;
 }
 const lg = (a, b) => html`<span><i style="background:${OKC}"></i>${a}</span><span><i style="background:${NOCS[0]}"></i>${b}</span>`;
 
@@ -22,7 +23,9 @@ export const mc = {
       const rows = s.options.map((o, i) => { const v = a.counts[i] || 0; return eRow(html`<b>${L6[i]}</b> ${o.text}`, o.correct ? '✓ richtig' : '', seg(K(i), v, a.n, o.correct ? OKC : NOCS[0], ''), `${v} von ${a.n}`); });
       return withChart(s.chart, c.key, html`${q}${evalBox(s, c, rows, lg('richtige Antwort', 'falsche Antworten'))}${s.explanation ? fb(true, s.explanation) : ''}`, s.source);
     }
-    return withChart(s.chart, c.key, html`${q}<div class="opts">${s.options.map((o, i) => html`<div class="opt static anim" style="--i:${i + 1}"><span class="bd">${L6[i]}</span><span class="ot">${o.text}</span></div>`)}</div>`, s.source);
+    // c.solution (PDF „Mit Lösungen“): richtige Antwort markiert, Erklärung darunter
+    const sol = !!c.solution;
+    return withChart(s.chart, c.key, html`${q}<div class="opts">${s.options.map((o, i) => html`<div class="opt static anim${sol && o.correct ? ' ok' : ''}" style="--i:${i + 1}"><span class="bd">${L6[i]}</span><span class="ot">${o.text}</span>${sol && o.correct ? ic('check', 'mk') : ''}</div>`)}</div>${sol && s.explanation ? fb(true, s.explanation) : ''}`, s.source);
   },
   student(d, c) {
     const st = c.local.mc ?? d.mine, done = st != null;
@@ -44,7 +47,8 @@ export const truefalse = {
       const rows = s.items.map((it, i) => { const x = a.items[i] || { right: 0, wrong: 0, n: 0 }; return eRow(it.text, `Lösung: ${it.correct ? L[0] : L[1]}`, html`${seg(`${s.id}|${i}|r`, x.right, x.n, OKC, '✓')}${seg(`${s.id}|${i}|w`, x.wrong, x.n, NOCS[0], '✗')}`, `n = ${x.n}`, it.explanation); });
       return withChart(s.chart, c.key, html`${q}${evalBox(s, c, rows, lg('richtig beurteilt', 'falsch beurteilt'))}`, s.source);
     }
-    return withChart(s.chart, c.key, html`${q}<div class="items${s.items.length >= 6 ? ' two' : ''}">${s.items.map((it, i) => html`<div class="item anim" style="--i:${i + 1}"><span class="inr">${i + 1}</span><div class="tx">${it.text}</div><div class="choices"><span class="choice">${L[0]}</span><span class="choice">${L[1]}</span></div></div>`)}</div>`, s.source);
+    const sol = !!c.solution, ch = (it, v) => html`<span class="choice${sol && it.correct === v ? ' good' : ''}">${L[v ? 0 : 1]}</span>`;
+    return withChart(s.chart, c.key, html`${q}<div class="items${s.items.length >= 6 ? ' two' : ''}">${s.items.map((it, i) => html`<div class="item anim" style="--i:${i + 1}"><span class="inr">${i + 1}</span><div class="tx">${it.text}</div><div class="choices">${ch(it, true)}${ch(it, false)}</div>${sol && it.explanation ? html`<div class="ex">${it.explanation}</div>` : ''}</div>`)}</div>`, s.source);
   },
   student(d, c) {
     const st = c.local.tf || (c.local.tf = d.mine ? d.mine.slice() : d.items.map(() => null));
@@ -72,7 +76,10 @@ export const sort = {
       });
       return html`${q}${evalBox(s, c, rows, lg('richtig zugeordnet', 'falsch zugeordnet (mit gewählter Spalte)'))}${srcLine(s.source)}`;
     }
-    return html`${q}<div class="sortcats anim">${s.categories.map((cat) => html`<span class="chip big">${cat.name}</span>`)}</div><div class="sortpool">${flat.map((it, i) => html`<span class="sortcard anim" style="--i:${i}">${it.text}</span>`)}</div>${srcLine(s.source)}`;
+    // c.solution (PDF „Mit Lösungen“): Begriffe unter ihrer Kategorie
+    if (c.solution) return html`${q}<div class="sortsol">${s.categories.map((cat, ci) => html`<div class="card sortgrp anim" style="--i:${ci + 1}"><span class="chip big">${cat.name}</span><div class="sortpool">${cat.items.map((text) => html`<span class="sortcard">${text}</span>`)}</div></div>`)}</div>${srcLine(s.source)}`;
+    // Begriffe gemischt zeigen – in der Reihenfolge der Kategorien wäre die Lösung schon abzulesen
+    return html`${q}<div class="sortcats anim">${s.categories.map((cat) => html`<span class="chip big">${cat.name}</span>`)}</div><div class="sortpool">${shuffled(flat, `beamer${s.id}`).map((it, i) => html`<span class="sortcard anim" style="--i:${i}">${it.text}</span>`)}</div>${srcLine(s.source)}`;
   },
   student(d, c) {
     const n = d.items.length, st = c.local.sort || (c.local.sort = d.mine ? d.mine.slice() : Array(n).fill(null));

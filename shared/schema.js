@@ -172,7 +172,7 @@ export function checkSlide(slide) {
 
 export function newSlide(type, sectionId) {
   const def = TYPES[type];
-  const s = JSON.parse(JSON.stringify(def.sample));
+  const s = { ...JSON.parse(JSON.stringify(def.sample)), ...(def.fresh ? JSON.parse(JSON.stringify(def.fresh)) : {}) };
   s.id = newId('s');
   s.section = sectionId;
   return s;

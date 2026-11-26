@@ -33,7 +33,7 @@ EINE STUNDE MIT PLENUM
 • Abschluss: Quiz mit Countdown und Rangliste, Zusammenfassung
 
 BEITRETEN IN SEKUNDEN
-Die Schüler:innen öffnen einen kurzen Link oder scannen den QR-Code – ohne App, ohne Anmeldung, ohne Namen. Plenum läuft im Browser der Laptops und Tablets, die in der Klasse ohnehin vorhanden sind. Alle Geräte im selben WLAN können mitmachen; eine Internetverbindung ist nicht nötig.
+Die Schüler:innen öffnen einen kurzen Link oder scannen den QR-Code – ohne App, ohne Anmeldung, ohne Namen. Plenum läuft im Browser der Laptops und Tablets, die in der Klasse ohnehin vorhanden sind. Alle Geräte im selben WLAN können mitmachen; die Klasse braucht dafür kein Internet.
 
 DU BEHÄLTST DIE FÜHRUNG
 • Alle Geräte zeigen die Folie, die gerade dran ist – oder die Klasse arbeitet im eigenen Tempo
@@ -46,7 +46,7 @@ LIVE-ERGEBNISSE
 Umfragen erscheinen als animierte Säulen-, Balken- oder Kreisdiagramme, auf Wunsch mit Vergleichswerten (zum Beispiel „Österreich“) oder als Experiment mit zwei Fassungen derselben Frage. Wortwolken bauen sich live auf, Skalen zeigen Mittelwert und Verteilung. Ein Diagramm-Labor macht sichtbar, wie Darstellungen täuschen können.
 
 IN WENIGEN MINUTEN VORBEREITET
-Im Editor baust du Lektionen aus 16 Folientypen – mit Live-Vorschau, Abschnitten, Diagrammdaten als Tabelle und Rückgängig. Oder du lässt einen KI-Chat deiner Wahl die Stunde vorbereiten, auf Wunsch passend zu Buchseiten oder Arbeitsblättern, die du im Chat anhängst: Plenum schreibt den Auftrag (Prompt), prüft und repariert die Antwort und zeigt dir vor dem Übernehmen, was neu ist. Plenum selbst sendet dabei nichts ins Internet.
+Im Editor baust du Lektionen aus 17 Folientypen – mit Live-Vorschau, Abschnitten, Diagrammdaten als Tabelle und Rückgängig. Oder du lässt einen KI-Chat deiner Wahl die Stunde vorbereiten, auf Wunsch passend zu Buchseiten oder Arbeitsblättern, die du im Chat anhängst: Plenum schreibt den Auftrag (Prompt), prüft und repariert die Antwort und zeigt dir vor dem Übernehmen, was neu ist. Plenum selbst sendet dabei nichts ins Internet.
 
 DESIGNS UND GRAFIKEN
 Neun Präsentationsdesigns – Standard, Klar, Nacht, Aurora, Tafel, Papier, Bunt, Blaupause und Kontrast – gelten am Beamer und auf den Geräten der Klasse. Die Titelfolie bekommt Motiv und Aufbau nach Wahl. Jede Folie kann eine Grafik tragen: eine der rund 40 mitgelieferten Illustrationen, ein Symbol oder ein eigenes Bild.
@@ -55,7 +55,7 @@ ORDNUNG IN DER BIBLIOTHEK
 Lektionen nach Fach und Schulstufe filtern und sortieren, duplizieren, als .plenum-Datei weitergeben und per Doppelklick öffnen. Eine Beispiellektion mit echten Daten aus Österreich ist dabei.
 
 DATENSCHUTZ
-Kein Konto, keine Cloud, keine Werbung, kein Tracking. Alle Daten bleiben auf deinem Computer und im lokalen Netz. Die Klasse braucht keine Namen – Spitznamen für das Quiz vergibt Plenum automatisch.
+Kein Konto, keine Cloud, keine Werbung, kein Tracking. Alle Daten bleiben auf deinem Computer und im lokalen Netz. Nur wenn du auf einer Video-Folie ein verlinktes Video startest (z. B. von YouTube), lädt dein Computer es von dessen Anbieter – die Geräte der Klasse nie. Die Klasse braucht keine Namen – Spitznamen für das Quiz vergibt Plenum automatisch.
 
 Plenum ist kostenlos und freie Software (GPL 3.0 oder später). Der Quellcode ist öffentlich: https://github.com/tobGat/plenum
 
@@ -71,7 +71,7 @@ Erste Veröffentlichung.
 
 1. Führt Schritt für Schritt durch die Stunde: Einstieg, Erarbeitung, Sicherung, Abschluss
 2. Beitritt per Link oder QR-Code – ohne App, Konto oder Namen
-3. Läuft im Browser der Laptops und Tablets der Klasse, ganz ohne Internet
+3. Läuft im Browser der Laptops und Tablets der Klasse – sie brauchen kein Internet
 4. Live-Umfragen mit animierten Diagrammen, Vergleichswerten und Frage-Experiment
 5. Wortwolke, Skala und offene Antworten mit Freigabe und Wortfilter
 6. Quiz mit Countdown, Punkten und Rangliste
@@ -79,12 +79,14 @@ Erste Veröffentlichung.
 8. Lückentext mit Ziehen und Ablegen aus einem Wortkasten
 9. Arbeitsaufträge mit „Ich bin fertig“ – du siehst, wie weit die Klasse ist
 10. Alle folgen der Folie vorne – oder arbeiten im eigenen Tempo
-11. Editor mit 16 Folientypen und Live-Vorschau
+11. Editor mit 17 Folientypen und Live-Vorschau
 12. Lektionen mit einem KI-Chat deiner Wahl erstellen und überarbeiten – auch passend zu Buchseiten
 13. Neun Präsentationsdesigns und rund 40 Illustrationen, dazu eigene Bilder
 14. Stände speichern und in der nächsten Stunde weitermachen
 15. Bibliothek nach Fach und Schulstufe filtern und sortieren
-16. Keine Cloud, kein Konto, keine Werbung, kein Tracking
+16. Folien als PDF: nur die Fragen, mit Lösungen oder mit den Ergebnissen der Klasse
+17. Videos (z. B. von YouTube) am Beamer – mit Beobachtungsaufträgen auf den Geräten der Klasse
+18. Keine Cloud, kein Konto, keine Werbung, kein Tracking
 
 ---
 
@@ -117,7 +119,7 @@ Empfohlene Reihenfolge mit Bildunterschriften (je ≤ 200 Zeichen):
 5. Lückentext mit Wortkasten – „Wörter in die Lücken ziehen und selbst prüfen.“
 6. Quiz mit Auflösung und Rangliste – „Wiederholen mit Spannung.“
 7. Beitreten: Link und QR-Code – „In Sekunden dabei.“
-8. Editor mit Vorschau – „Lektionen aus 16 Folientypen bauen.“
+8. Editor mit Vorschau – „Lektionen aus 17 Folientypen bauen.“
 9. „Mit KI erstellen“ – „Die Stunde mit einem KI-Chat deiner Wahl vorbereiten.“
 10. Designs – „Neun Präsentationsdesigns für Beamer und Geräte.“
 

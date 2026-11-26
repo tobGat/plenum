@@ -6,7 +6,35 @@ import { COLOR_NAMES, ICON_NAMES } from './palette.js';
 import { FORMAT, VERSION, MAX_SLIDES, THEMES, GRAPHIC_POS } from './schema.js';
 import { LIBRARY } from './graphics.js';
 
-export const DEFAULT_TYPES = TYPE_LIST.map((t) => t.type).filter((t) => t !== 'sources');
+// Video-Folien gibt es nur, wenn die Lehrkraft Video-Links vorgibt – eine KI darf keine Adressen erfinden.
+export const DEFAULT_TYPES = TYPE_LIST.map((t) => t.type).filter((t) => t !== 'sources' && t !== 'video');
+
+// Video-Links aus dem Formular: eine Adresse pro Zeile, dahinter optional eine Notiz („https://… – nur bis 3:20“)
+export function parseVideos(text) {
+  const out = [];
+  for (const line of String(text || '').split(/\r?\n/)) {
+    const m = /(https?:\/\/\S+|(?:www\.)?(?:youtube\.com|youtu\.be)\/\S+)/i.exec(line);
+    if (!m) continue;
+    const url = (/^https?:/i.test(m[1]) ? m[1] : `https://${m[1]}`).replace(/[),.;]+$/, '');
+    const note = (line.slice(0, m.index) + ' ' + line.slice(m.index + m[1].length)).replace(/^[\s\-–—:·,;.)\d]+|[\s\-–—:·,;]+$/g, '').replace(/\s+/g, ' ').slice(0, 200);
+    if (!out.some((v) => v.url === url)) out.push({ url, note });
+    if (out.length >= 6) break;
+  }
+  return out;
+}
+const cleanVideos = (videos) => (Array.isArray(videos) ? videos.filter((v) => v && /^https?:\/\//i.test(v.url)).slice(0, 6) : []);
+function videoBlock(videos, mode = 'create') {
+  if (!videos.length) return '';
+  return ['VIDEOS:', `${videos.length === 1 ? 'Dieses Video soll' : 'Diese Videos sollen'} in der Stunde vorkommen:`,
+    ...videos.map((v, i) => `${i + 1}. ${v.url}${v.note ? ` – ${v.note}` : ''}`), '', 'So nutzt du die Videos:',
+    ...[
+      'Jedes Video bekommt genau eine Folie vom Typ "video". Schreibe die Adresse unverändert in das Feld "url". Verwende keine anderen Videos und erfinde keine Adressen.',
+      'Rufe jedes Video bzw. sein Transkript ab, wenn du das kannst, und plane den Inhalt ein: 2–4 Beobachtungsaufträge auf der Video-Folie ("tasks"), direkt danach passende Folien zum Video (Verständnisfragen, Lückentext, Zuordnung oder Quizfragen).',
+      'Soll nur ein Ausschnitt gezeigt werden, trage Beginn und Ende in "start" und "end" ein (Format 1:30).',
+      'Kannst du ein Video nicht abrufen, erfinde nichts über seinen Inhalt. Formuliere dann allgemeine Beobachtungsaufträge zum Thema und schreibe in "notes" dieser Folie: „Inhalt des Videos nicht geprüft – Aufträge und Fragen bitte anpassen.“',
+      ...(mode === 'revise' ? ['Füge die Video-Folien an einer sinnvollen Stelle ein und ändere sonst nur, was der Änderungswunsch verlangt.'] : []),
+    ].map((r, i) => `${i + 1}. ${r}`)].join('\n');
+}
 
 // Material (Buchseiten, Arbeitsblätter, Fotos …) hängt die Lehrkraft im KI-Chat selbst an; Plenum beschreibt nur, wie es zu nutzen ist.
 // material: null/false = keines, sonst { desc: 'Buch S. 40–42, Ü2–Ü4' } (Beschreibung optional)
@@ -43,9 +71,10 @@ const pickTypes = (types) => {
 };
 
 // Beispiel: die Muster-Folien der gewählten Typen (zeigen die Form, nicht den Inhalt)
-export function exampleLesson(types) {
+export function exampleLesson(types, videos = []) {
   const list = pickTypes(types);
-  const slides = list.map((t, i) => ({ type: t, section: i < 2 ? 'Einstieg' : 'Erarbeitung', ...stripType(TYPES[t].sample) }));
+  // Mit vorgegebenen Videos steht im Beispiel gleich die richtige Adresse statt eines Platzhalters
+  const slides = list.map((t, i) => ({ type: t, section: i < 2 ? 'Einstieg' : 'Erarbeitung', ...stripType(TYPES[t].sample), ...(t === 'video' && videos[0] ? { url: videos[0].url } : {}) }));
   return {
     format: FORMAT, version: VERSION, title: 'Wasser im Alltag', subject: 'Biologie', grade: '6. Schulstufe', description: 'Wie viel Wasser brauchen wir?',
     sections: [{ name: 'Einstieg', color: 'indigo', icon: 'compass' }, { name: 'Erarbeitung', color: 'teal', icon: 'book' }],
@@ -100,19 +129,22 @@ function formatBlock(list) {
 }
 
 // Neue Lektion erstellen
-export function buildPrompt({ topic = '', subject = '', grade = '', count = 12, countMode = 'exact', countMin, countMax, types = [], notes = '', material = null, materialUse = 'buch' } = {}) {
+const withVideo = (types, vids) => { const base = (types && types.length ? types : DEFAULT_TYPES).filter((t) => t !== 'video'); return vids.length ? [...base, 'video'] : base; };
+export function buildPrompt({ topic = '', subject = '', grade = '', count = 12, countMode = 'exact', countMin, countMax, types = [], notes = '', material = null, materialUse = 'buch', videos = [] } = {}) {
+  const vids = cleanVideos(videos);
   // Mit Buch-/Arbeitsblatt-Material braucht es Arbeitsaufträge („Zuerst im Buch …“)
-  const list = pickTypes(material && materialUse !== 'orient' && types.length && !types.includes('task') ? [...types, 'task'] : types), scope = scopeOf({ count, countMode, countMin, countMax });
-  const ex = exampleLesson(list);
+  const list = pickTypes(withVideo(material && materialUse !== 'orient' && types.length && !types.includes('task') ? [...types, 'task'] : types, vids)), scope = scopeOf({ count, countMode, countMin, countMax });
+  const ex = exampleLesson(list, vids);
   return [
     'Du bist eine erfahrene Lehrkraft und bereitest eine interaktive Unterrichtsstunde für die App „Plenum“ vor. Die Lehrkraft zeigt die Folien am Beamer, die Klasse macht auf Handys mit (Abstimmungen, Quiz, Aufgaben).',
     '',
-    `THEMA: ${topic.trim() || (material ? 'siehe angehängtes Material' : '(bitte ergänzen)')}`,
+    `THEMA: ${topic.trim() || (material ? 'siehe angehängtes Material' : vids.length ? `siehe ${vids.length === 1 ? 'Video' : 'Videos'}` : '(bitte ergänzen)')}`,
     subject.trim() ? `FACH: ${subject.trim()}` : '',
     grade.trim() ? `ZIELGRUPPE / SCHULSTUFE: ${grade.trim()}` : '',
     `UMFANG: ${scope.short}`,
     notes.trim() ? `WÜNSCHE DER LEHRKRAFT: ${notes.trim()}` : '',
     materialBlock(material, materialUse),
+    videoBlock(vids),
     '',
     'REGELN:',
     ...RULES(scope).map((r, i) => `${i + 1}. ${r}`),
@@ -123,27 +155,28 @@ export function buildPrompt({ topic = '', subject = '', grade = '', count = 12, 
     '```json',
     JSON.stringify(ex),
     '```',
-  ].filter((x) => x !== '').join('\n').replace(/\n(MATERIAL:|REGELN:|FORMAT DER ANTWORT:|BEISPIEL)/g, '\n\n$1');
+  ].filter((x) => x !== '').join('\n').replace(/\n(MATERIAL:|VIDEOS:|So nutzt du die Videos:|REGELN:|FORMAT DER ANTWORT:|BEISPIEL)/g, '\n\n$1');
 }
 
 // Bestehende Lektion überarbeiten: IDs bleiben erhalten, damit gespeicherte Stände passen und ein Vergleich möglich ist
-export function buildRevisePrompt({ lesson, wish = '', types = [], material = null } = {}) {
-  const used = [...new Set(lesson.slides.map((s) => s.type))];
-  const list = pickTypes([...new Set([...used, ...(types.length ? types : DEFAULT_TYPES)])]);
+export function buildRevisePrompt({ lesson, wish = '', types = [], material = null, videos = [] } = {}) {
+  const used = [...new Set(lesson.slides.map((s) => s.type))], vids = cleanVideos(videos);
+  const list = pickTypes([...new Set([...used, ...(types.length ? types : DEFAULT_TYPES), ...(vids.length ? ['video'] : [])])]);
   const L = { ...lesson };
   delete L.createdAt; delete L.updatedAt; delete L.appVersion; delete L.media; // eingebettete Bilder bleiben in Plenum
   return [
     'Du bist eine erfahrene Lehrkraft. Überarbeite die folgende Unterrichtsstunde für die App „Plenum“ (Folien am Beamer, die Klasse macht auf Handys mit).',
     '',
-    `ÄNDERUNGSWUNSCH: ${wish.trim() || (material ? 'Ergänze die Lektion passend zum angehängten Material.' : 'Verbessere Verständlichkeit und Abwechslung, ohne das Thema zu ändern.')}`,
+    `ÄNDERUNGSWUNSCH: ${wish.trim() || (material ? 'Ergänze die Lektion passend zum angehängten Material.' : vids.length ? `Baue ${vids.length === 1 ? 'das Video' : 'die Videos'} in die Lektion ein.` : 'Verbessere Verständlichkeit und Abwechslung, ohne das Thema zu ändern.')}`,
     ...(material ? ['', materialBlock(material, 'buch', 'revise')] : []),
+    ...(vids.length ? ['', videoBlock(vids, 'revise')] : []),
     '',
     'REGELN:',
     ...[
       ...RULES(0),
       'Gib die VOLLSTÄNDIGE überarbeitete Lektion zurück, nicht nur die Änderungen.',
       'Behalte "id" der Lektion, der Abschnitte und aller Folien, die du übernimmst oder änderst. Neue Folien und Abschnitte bekommen KEINE "id". Entfernte Folien lässt du einfach weg.',
-      'Ändere nur, was der Änderungswunsch verlangt. Vorhandene Quellenangaben und "graphic"-Angaben (auch "media:…") unverändert übernehmen.',
+      'Ändere nur, was der Änderungswunsch verlangt. Vorhandene Quellenangaben, "graphic"-Angaben (auch "media:…") und Video-Adressen ("url") unverändert übernehmen.',
     ].map((r, i) => `${i + 1}. ${r}`),
     '',
     formatBlock(list),
@@ -156,11 +189,12 @@ export function buildRevisePrompt({ lesson, wish = '', types = [], material = nu
 }
 
 // Vorlage als Datei: leere Lektion mit Anleitung und je einer Musterfolie pro Typ – für Chatbots mit Datei-Upload
-export function templateJson({ types = [], count = 12, countMode = 'exact', countMin, countMax, topic = '', material = null } = {}) {
-  const ex = exampleLesson(types);
+export function templateJson({ types = [], count = 12, countMode = 'exact', countMin, countMax, topic = '', material = null, videos = [] } = {}) {
+  const vids = cleanVideos(videos), ex = exampleLesson(withVideo(types, vids), vids);
   return {
     _anleitung: `Fülle diese Vorlage für eine Plenum-Unterrichtsstunde${topic ? ` zum Thema „${topic}“` : ''} aus – Umfang: ${scopeOf({ count, countMode, countMin, countMax }).short}. ` +
       (material ? `Richte dich nach den weiteren angehängten Dateien${material.desc ? ` (${String(material.desc).trim()})` : ''}; Aufgaben aus dem Buch bekommen eine eigene Folie vom Typ "task". ` : '') +
+      (vids.length ? `Baue ${vids.length === 1 ? 'dieses Video' : 'diese Videos'} als Folie vom Typ "video" ein (Adresse unverändert): ${vids.map((v) => v.url).join(', ')}. ` : '') +
       'Ersetze die Musterfolien durch eigene, verwende nur die vorkommenden Folientypen, halte das Format exakt ein und antworte mit einem einzigen JSON-Codeblock. ' +
       'Erfinde keine Zahlen oder Quellen – sonst als Quelle "Beispieldaten (fiktiv)". Anführungszeichen in Texten nur als „…“. Das Feld "_anleitung" weglassen.',
     ...ex,
