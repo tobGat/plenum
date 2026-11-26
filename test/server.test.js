@@ -165,6 +165,25 @@ test('Wortwolke und offene Antworten: Filter hält zurück, Freigabe zeigt', asy
   assert.equal(st.aggs[o.id].items[0].visible, true);
 });
 
+test('Anwesenheit: Lehrkraft erfährt nur die Anzahl der Geräte, die Plenum verlassen haben', async () => {
+  const { s: so } = await student('awayAAAxyz');
+  await wait(80);
+  assert.equal((await emit(host, 'host:state')).away, 0);
+  let ev = once(host, 'away'); so.emit('away', true);
+  assert.equal(await ev, 1);
+  const st = await emit(host, 'host:state');
+  assert.equal(st.away, 1);
+  assert.ok(!JSON.stringify(st.away).includes('awayAAAxyz'));
+  so.emit('away', 'ja'); await wait(80); // nur true zählt als „weg“
+  assert.equal((await emit(host, 'host:state')).away, 0);
+  ev = once(host, 'away'); so.emit('away', true); assert.equal(await ev, 1);
+  ev = once(host, 'away'); so.disconnect(); // getrenntes Gerät zählt nicht mehr mit
+  assert.equal(await ev, 0);
+  const fake = await conn(false); sockets.push(fake); // ohne Beitritt keine Meldung
+  fake.emit('away', true); await wait(80);
+  assert.equal((await emit(host, 'host:state')).away, 0);
+});
+
 test('Stände: speichern, laden, geänderte Folien erkennen', async () => {
   const mcSlide = L.slides.find((x) => x.type === 'mc');
   const r = await emit(host, 'host:saveAs', 'Klasse 4a');

@@ -17,6 +17,9 @@ app.commandLine.appendSwitch('force-device-scale-factor', '1');
 // Wie main.js, aber ohne die echte Zwischenablage zu überschreiben: der Test liest den kopierten Text hier
 export const clip = { text: '' };
 ipcMain.handle('copyText', (e, t) => { clip.text = String(t); return true; });
+// Vollbild wie in main.js, aber ohne echtes Fenster umzuschalten: der Test liest den Zustand hier
+export const fullState = { on: false };
+ipcMain.handle('fullScreen', (e, mode) => { if (mode === 'toggle') fullState.on = !fullState.on; else if (mode === 'off') fullState.on = false; return fullState.on; });
 
 function watch(win, name) {
   const wc = win.webContents;

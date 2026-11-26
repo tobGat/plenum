@@ -47,8 +47,23 @@ function join() {
     $('hchap').textContent = r.title || 'Plenum';
     closeOv();
     show(r.slide);
+    awaySent = false; checkAway();
   });
 }
+
+// Anwesenheit: meldet anonym, ob diese Seite gerade im Vordergrund ist – die Lehrkraft sieht nur die Anzahl.
+// Kurzes Wegschalten (unter 2 s) zählt nicht. Die Testansicht am Computer der Lehrkraft meldet nichts.
+const PRESENCE = !['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname) || /[?&]presence=1/.test(location.search);
+let awaySent = false, awayTimer = null;
+const isAway = () => document.hidden || !document.hasFocus();
+function sendAway(v) { if (!PRESENCE || !joined || v === awaySent) return; awaySent = v; socket.emit('away', v); }
+function checkAway() {
+  clearTimeout(awayTimer);
+  if (!isAway()) sendAway(false);
+  else awayTimer = setTimeout(() => { if (isAway()) sendAway(true); }, 2000);
+}
+document.addEventListener('visibilitychange', checkAway);
+['blur', 'focus', 'pageshow'].forEach((ev) => window.addEventListener(ev, checkAway));
 
 function show(p) {
   if (!p) return;

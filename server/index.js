@@ -185,6 +185,7 @@ export async function startServer(opts) {
     on('goto', (sid) => rooms.goto(socket, sid));
     on('submit', (d) => rooms.submit(socket, d?.slideId, d?.data));
     on('nick', (name) => rooms.setNick(socket.data.cid, name, false));
+    on('away', (v) => rooms.setAway(socket, v));
     socket.on('disconnect', () => rooms.left());
   });
 

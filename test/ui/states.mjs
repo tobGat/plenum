@@ -1,7 +1,7 @@
 // UI-Test: Folien ohne Aufgabe bleiben am Beamer („Schau nach vorne“), Stände in der Bibliothek löschen.
 // Aufruf: node main/launch.cjs test/ui/states.mjs [Ausgabeordner]
 import { app } from 'electron';
-import { sleep, report, makeWin, js, waitFor, mustClick, shot, startTestServer, finish } from './lib.mjs';
+import { sleep, report, makeWin, js, waitFor, mustClick, shot, startTestServer, finish, fullState } from './lib.mjs';
 
 const check = (c, m) => { if (!c) report(m); };
 
@@ -23,6 +23,19 @@ async function main() {
   await mustClick(host, '[data-action="next"]', 'Weiter');
   await waitFor(tab, `document.querySelector('form.wordform')`, 5000, 'Wortwolke am Gerät');
 
+  // Anwesenheit: ein Gerät, das Plenum nicht im Vordergrund hat, erscheint vorne als Anzahl (die Testansicht über 127.0.0.1 meldet nur mit ?presence=1)
+  check(!(await js(host, `document.querySelector('.awaybadge')`)), 'Anwesenheits-Hinweis ohne Anlass sichtbar');
+  const away = makeWin(1180, 820, 't2', 'Tablet 2');
+  await away.loadURL(`${base}/?presence=1`);
+  await waitFor(away, `document.querySelector('form.wordform')`, 8000, 'zweites Gerät beigetreten');
+  await js(away, `(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true}); document.dispatchEvent(new Event('visibilitychange'));})()`);
+  await waitFor(host, `document.querySelector('.awaybadge b')?.textContent === '1'`, 6000, 'Hinweis „1 nicht in Plenum“');
+  await shot(host, 's01a-nicht-in-plenum');
+  await js(away, `(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>false}); document.hasFocus=()=>true; document.dispatchEvent(new Event('visibilitychange'));})()`);
+  await waitFor(host, `!document.querySelector('.awaybadge')`, 4000, 'Hinweis verschwindet, wenn das Gerät zurück ist');
+  away.destroy();
+  await sleep(200);
+
   // Zwei Stände speichern, Präsentation beenden
   for (const name of ['Klasse 4a', 'Klasse 4b']) {
     await mustClick(host, '[data-action="states"]', 'Stände');
@@ -32,9 +45,23 @@ async function main() {
     await js(host, `document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}))`);
     await sleep(200);
   }
+  // Vollbild: Schaltfläche schaltet um und zeigt den Zustand; beim Beenden der Präsentation endet auch das Vollbild
+  check((await js(host, `document.querySelector('[data-action="full"]')?.getAttribute('aria-pressed')`)) === 'false', 'Vollbild-Schaltfläche fehlt oder ist schon aktiv');
+  await mustClick(host, '[data-action="full"]', 'Vollbild');
+  await waitFor(host, `document.querySelector('[data-action="full"]').getAttribute('aria-pressed') === 'true'`, 3000, 'Vollbild-Schaltfläche aktiv');
+  check(fullState.on, 'Vollbild wurde nicht eingeschaltet');
+  await shot(host, 's01b-vollbild-schaltflaeche');
+  await mustClick(host, '[data-action="full"]', 'Vollbild beenden');
+  await waitFor(host, `document.querySelector('[data-action="full"]').getAttribute('aria-pressed') === 'false'`, 3000, 'Vollbild-Schaltfläche wieder aus');
+  check(!fullState.on, 'Vollbild wurde nicht ausgeschaltet');
+  await mustClick(host, '[data-action="full"]', 'Vollbild');
+  await waitFor(host, `document.querySelector('[data-action="full"]').getAttribute('aria-pressed') === 'true'`, 3000, 'Vollbild-Schaltfläche aktiv');
+
   await mustClick(host, '[data-action="exit"]', 'Beenden');
   await mustClick(host, '#ov [data-r="1"]', 'Beenden bestätigen');
   await waitFor(host, `document.querySelector('.lcard')`, 6000, 'zurück in der Bibliothek');
+  await sleep(200);
+  check(!fullState.on, 'Vollbild bleibt nach dem Beenden der Präsentation an');
 
   // Bibliothek: Stände einzeln und gesamt löschen
   const slots = () => js(host, `[...document.querySelectorAll('#ov .slot .slot-n')].map(e=>e.textContent.trim())`);

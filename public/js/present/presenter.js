@@ -3,7 +3,7 @@ import { html, raw, esc, delegate, fmt, toast, whenStr, copyText } from '../core
 import { ic, logo } from '../core/icons.js';
 import { fit, autoFit } from '../core/fit.js';
 import { overlay, closeOv, ask, ovOpen } from '../core/overlay.js';
-import { shead, colorOf, ring, animWidths, resetSegs, resetRings, applyTheme, themeCols, withGraphic } from '../core/parts.js';
+import { shead, colorOf, ring, animWidths, resetSegs, resetRings, applyTheme, themeCols, withGraphic, awayBadge } from '../core/parts.js';
 import { CH, chartReset } from '../charts.js';
 import { RENDER } from '../types/index.js';
 import { TYPES } from '/shared/types/index.js';
@@ -12,7 +12,7 @@ const SELF = ['mc', 'truefalse', 'sort'];
 
 export function createPresenter({ root, socket, api, info, onExit }) {
   let S = null; // Zustand vom Server: { lesson, slideId, sync, aggs, online, slot, changed, players, freeNicks }
-  let lastId = null, savedAt = 0, adapter = info.settings?.adapter || '';
+  let lastId = null, savedAt = 0, full = false, adapter = info.settings?.adapter || '';
   const prefs = {}, local = {};
 
   root.innerHTML = String(html`<div id="app" class="present">
@@ -81,12 +81,30 @@ export function createPresenter({ root, socket, api, info, onExit }) {
   const refresh = () => { content.classList.remove('enter'); renderBody(false); };
 
   function renderRoom() {
-    $('hroom').innerHTML = String(html`<span class="livebadge"><span class="pulse"></span><b>${S.online}</b> online</span>
+    $('hroom').innerHTML = String(html`<span class="livebadge"><span class="pulse"></span><b>${S.online}</b> online</span>${awayBadge(S.away)}
       <button class="hbtn" data-action="join" title="Link und QR-Code zum Mitmachen">${ic('qr')}<span>Beitreten</span></button>
       <button class="hbtn${S.slot ? ' saved' : ''}" data-action="states" title="${S.slot ? `Stand „${S.slot.name}“ – wird automatisch gespeichert${savedAt ? `, zuletzt um ${new Date(savedAt).toLocaleTimeString('de-AT', { hour: '2-digit', minute: '2-digit' })}` : ''}` : 'Stand speichern oder laden'}">${ic('save')}<span>${S.slot ? S.slot.name : 'Speichern'}</span></button>
       <button class="hbtn" data-action="moderation" title="Moderationsfenster (z. B. am Laptop, während der Beamer die Folie zeigt)">${ic('settings')}<span>Moderation</span></button>
       <button class="hbtn tglh${S.sync ? ' on' : ''}" data-action="sync" title="Alle Geräte zeigen dieselbe Folie wie vorne"><span class="sw"></span><span>Alle folgen</span></button>
+      <button class="hbtn" data-action="full" title="${full ? 'Vollbild beenden (F11 oder Esc)' : 'Vollbild – am Beamer ist nur Plenum zu sehen (F11)'}" aria-label="${full ? 'Vollbild beenden' : 'Vollbild'}" aria-pressed="${full ? 'true' : 'false'}">${ic(full ? 'shrink' : 'expand')}</button>
       <button class="hbtn" data-action="exit" title="Präsentation beenden">${ic('x')}</button>`);
+  }
+
+  // ---------- Vollbild (im Programmfenster über den Hauptprozess, im Browser über die Fullscreen-API) ----------
+  const appFull = window.plenumApp?.fullScreen ? window.plenumApp : null;
+  const setFull = (on) => { if (on === full) return; full = on; if (S) renderRoom(); };
+  const onDocFull = () => { if (!appFull) setFull(!!document.fullscreenElement); };
+  document.addEventListener('fullscreenchange', onDocFull);
+  const offFull = appFull?.onFullScreen?.(setFull);
+  if (appFull) appFull.fullScreen('get').then(setFull, () => {}); else onDocFull();
+  function toggleFull() {
+    if (appFull) appFull.fullScreen('toggle').then(setFull, () => {});
+    else if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen?.().catch(() => toast('Vollbild ist hier nicht möglich', 'err'));
+  }
+  function leaveFull() {
+    if (appFull) appFull.fullScreen('off').catch(() => {});
+    else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   }
 
   // ---------- Steuerung ----------
@@ -123,7 +141,7 @@ export function createPresenter({ root, socket, api, info, onExit }) {
     prev: () => go(-1), next: () => go(1),
     sec: (el) => { const f = S.lesson.slides.find((x) => x.section === el.dataset.id); if (f) goto(f.id); },
     sync: () => { S.sync = !S.sync; socket.emit('host:sync', S.sync); renderRoom(); },
-    join: showJoin, states: showStates, close: closeOv,
+    join: showJoin, states: showStates, close: closeOv, full: toggleFull,
     copy: async (el) => { if (await copyText(joinUrl())) el.innerHTML = String(html`${ic('check')}Kopiert`); else toast('Kopieren nicht möglich – den Link bitte abschreiben', 'err'); },
     testStudent: () => { window.open(`http://127.0.0.1:${info.port}/`, '_blank', 'width=420,height=860'); },
     moderation: () => { window.open('/host#/moderation', 'plenum-moderation', 'width=1100,height=760'); },
@@ -165,6 +183,7 @@ export function createPresenter({ root, socket, api, info, onExit }) {
   const offs = [
     on('agg', (d) => { if (!S) return; S.aggs[d.slideId] = d.data; if (d.slideId === S.slideId) refresh(); }),
     on('online', (n) => { if (!S) return; S.online = n; renderRoom(); const s = cur(); if (TYPES[s.type].live) refresh(); }),
+    on('away', (n) => { if (S && S.away !== n) { S.away = n; renderRoom(); } }),
     on('players', (p) => { if (S) S.players = p; }),
     on('saved', (d) => { savedAt = d.at; if (S) { S.slot = d.slot || S.slot; renderRoom(); } }),
     on('slideChanged', (d) => { if (S && d.slideId !== S.slideId) { S.slideId = d.slideId; render(); } }),
@@ -175,7 +194,7 @@ export function createPresenter({ root, socket, api, info, onExit }) {
   return {
     show(state) { S = state; lastId = null; render(); if (!(state.online > 0)) showJoin(); },
     update(state) { applyState(state); },
-    destroy() { offs.forEach((f) => f()); undel.forEach((f) => f()); clearInterval(ticker); document.removeEventListener('keydown', onKey); window.plenumApp?.setPresenting?.(false); },
+    destroy() { offs.forEach((f) => f()); undel.forEach((f) => f()); clearInterval(ticker); document.removeEventListener('keydown', onKey); document.removeEventListener('fullscreenchange', onDocFull); if (offFull) offFull(); leaveFull(); window.plenumApp?.setPresenting?.(false); },
     get state() { return S; },
   };
 }

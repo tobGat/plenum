@@ -44,7 +44,11 @@ verantwortlich.
    (höchstens 16 Zeichen, mit Wortfilter; die Lehrkraft kann ihn ändern oder entfernen).
    Spitznamen werden **nur während der Präsentation** im Arbeitsspeicher gehalten und
    **nicht** in Stände gespeichert.
-5. **Fehlerprotokoll** – eine lokale Textdatei mit technischen Meldungen (z. B. Start,
+5. **Anwesenheit** – die Schülerseite meldet, ob sie gerade im Vordergrund ist oder ob auf
+   einen anderen Tab oder ein anderes Programm gewechselt wurde. Die Lehrkraft sieht daraus
+   **nur eine Anzahl** („3 nicht in Plenum“), nicht, welches Gerät es ist. Plenum sieht
+   nicht, was auf dem Gerät sonst geöffnet ist, und speichert diese Angabe nicht.
+6. **Fehlerprotokoll** – eine lokale Textdatei mit technischen Meldungen (z. B. Start,
    Fehler), höchstens etwa 1 MB, ältere Einträge werden überschrieben. Sie enthält keine
    Antworten der Klasse.
 

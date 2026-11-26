@@ -60,6 +60,8 @@ function shortcuts(w) {
     else return;
     e.preventDefault();
   });
+  const tellFull = () => { if (!w.isDestroyed()) w.webContents.send('fullscreen', w.isFullScreen()); };
+  w.on('enter-full-screen', tellFull); w.on('leave-full-screen', tellFull);
   w.webContents.on('render-process-gone', (e, d) => log('render-process-gone', d));
   w.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith(`${base}/`)) return { action: 'allow', overrideBrowserWindowOptions: windowDefaults() }; // Moderation, Schüleransicht, Hilfe
@@ -89,6 +91,15 @@ async function start() {
     if (!e.senderFrame || !e.senderFrame.url.startsWith(base)) return;
     if (on && blocker === null) blocker = powerSaveBlocker.start('prevent-display-sleep');
     if (!on && blocker !== null) { powerSaveBlocker.stop(blocker); blocker = null; }
+  });
+  // Vollbild des aufrufenden Fensters: 'toggle', 'off' oder 'get' – liefert den neuen Zustand
+  ipcMain.handle('fullScreen', (e, mode) => {
+    const w = BrowserWindow.fromWebContents(e.sender);
+    if (!w || !e.senderFrame.url.startsWith(base)) return false;
+    if (mode === 'get') return w.isFullScreen();
+    const on = mode === 'toggle' ? !w.isFullScreen() : false;
+    if (on !== w.isFullScreen()) w.setFullScreen(on);
+    return on;
   });
   ipcMain.handle('openPath', (e, p) => (e.senderFrame.url.startsWith(base) && path.resolve(p) === path.resolve(srv.store.lessonsDir) ? shell.openPath(p) : 'nicht erlaubt'));
   ipcMain.handle('copyText', (e, t) => { if (!e.senderFrame.url.startsWith(base)) return false; clipboard.writeText(String(t).slice(0, 2e6)); return true; });

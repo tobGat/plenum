@@ -53,6 +53,9 @@ export function withGraphic(head, body, g, mediaUrl) {
   return html`<div class="wrap hasg g-side g-${g.pos === 'left' ? 'left' : 'right'} ${sz}">${fig}<div class="wmain">${head}${body}</div></div>`;
 }
 
+// Hinweis für die Lehrkraft: so viele Geräte haben Plenum gerade nicht im Vordergrund (anonym, nur die Anzahl)
+export const awayBadge = (n) => (n > 0 ? html`<span class="awaybadge" title="${n === 1 ? 'Ein Gerät hat' : `${n} Geräte haben`} Plenum gerade nicht im Vordergrund (anderer Tab oder anderes Programm). Anonym – Plenum weiß nicht, wer es ist.">${ic('eyeoff')}<b>${n}</b> nicht in Plenum</span>` : '');
+
 export function shead(title, section) {
   return html`<div class="shead"><div class="kicker"><span class="kic">${ic(section.icon)}</span>${section.name}</div><h2>${title}</h2></div>`;
 }

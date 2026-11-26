@@ -81,13 +81,16 @@ export function createRooms({ io, store, extraWords = () => [] }) {
     toHost('agg', { slideId: s.id, data: aggOf(s) });
     if (s.type === 'quiz') room.lesson.slides.filter((x) => x.type === 'leaderboard').forEach((x) => { toHost('agg', { slideId: x.id, data: aggOf(x) }); pushOnSlide(x.id); });
   }
+  // Anwesenheit: nur die Anzahl der Geräte, die Plenum gerade nicht im Vordergrund haben – ohne Zuordnung
+  const away = () => studentSockets().filter((so) => so.data.away).length;
+  const pushAway = () => toHost('away', away());
   const players = () => Object.keys(room.nicks).filter((c) => room.cids.has(c)).map((cid) => ({ cid, nick: room.nicks[cid] }));
 
   function hostState() {
     if (!room) return { presenting: false };
     const aggs = {};
     for (const s of room.lesson.slides) { const a = aggOf(s); if (a) aggs[s.id] = a; }
-    return { presenting: true, lesson: room.lesson, slideId: room.slideId, sync: room.sync, aggs, online: online(), slot: room.slot, changed: room.changed, freeNicks: room.freeNicks, players: players() };
+    return { presenting: true, lesson: room.lesson, slideId: room.slideId, sync: room.sync, aggs, online: online(), away: away(), slot: room.slot, changed: room.changed, freeNicks: room.freeNicks, players: players() };
   }
 
   // ---------- Stände (automatisch und benannt) ----------
@@ -292,6 +295,7 @@ export function createRooms({ io, store, extraWords = () => [] }) {
       if (!(d.cid in room.order)) room.order[d.cid] = room.nextIdx++;
       socket.leave('w'); socket.join('s');
       toHost('online', online());
+      pushAway();
       toHost('players', players());
       return { ok: true, title: room.lesson.title, theme: room.lesson.theme || 'standard', outline: outline(room.lesson), nick: nickOf(d.cid), freeNicks: room.freeNicks, slide: payloadFor(d.cid) };
     },
@@ -310,7 +314,13 @@ export function createRooms({ io, store, extraWords = () => [] }) {
       if (s.type === 'quiz') return { ok: true };
       return { ok: true, mine: s.type === 'open' ? v.map((a) => a.text) : s.type === 'poll' ? v.c : v };
     },
-    left() { if (room) toHost('online', online()); },
+    setAway(socket, on) {
+      const v = on === true;
+      if (!socket.data.cid || !!socket.data.away === v) return;
+      socket.data.away = v;
+      if (room) pushAway();
+    },
+    left() { if (room) { toHost('online', online()); pushAway(); } },
   };
   return api;
 }
