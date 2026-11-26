@@ -12,10 +12,15 @@ const SITE = 'https://plenum.schulapps.at';
 
 // Link zur App im Microsoft Store (Partner Center → Produktidentität → Store-ID):
 // https://apps.microsoft.com/detail/<Store-ID>. Leer = Hinweis „Bald im Microsoft Store“.
-const STORE_URL = '';
+const STORE_URL = 'https://apps.microsoft.com/detail/9NXX8BGWT57B';
 
 const read = (p) => readFileSync(join(root, p), 'utf8');
-const storeButton = STORE_URL ? `<a class="btn" href="${STORE_URL}">Im Microsoft Store laden</a>` : '<span class="btn btn-soon">Bald im Microsoft Store</span>';
+const storeButton = STORE_URL ? `<a class="btn" href="${STORE_URL}" rel="noopener">Im Microsoft Store laden</a>` : '<span class="btn btn-soon">Bald im Microsoft Store</span>';
+// Texte der Startseite, die davon abhängen, ob die App schon im Store ist
+const storeTexts = STORE_URL
+  ? { '{{STORE_BADGE}}': 'Jetzt im Microsoft Store', '{{FINAL_TITLE}}': 'Jetzt im Microsoft Store verfügbar', '{{FINAL_TEXT}}': 'Plenum ist kostenlos und in wenigen Sekunden installiert – für Windows 10 und 11, ohne Konto.', '{{STORE_LEAD}}': 'Jetzt im Microsoft Store' }
+  : { '{{STORE_BADGE}}': 'Bald im Microsoft Store', '{{FINAL_TITLE}}': 'Plenum erscheint in Kürze', '{{FINAL_TEXT}}': 'Die App wird gerade für den Microsoft Store vorbereitet. Sobald sie verfügbar ist, findest du hier den Link.', '{{STORE_LEAD}}': 'Bald im Microsoft Store' };
+const withStore = (s) => Object.entries({ '{{STORE_BUTTON}}': storeButton, ...storeTexts }).reduce((t, [k, v]) => t.replaceAll(k, v), s);
 
 // Sehr kleines Markdown (Überschriften, Absätze, Listen, fett, kursiv, Code) für die Datenschutzerklärung
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -118,9 +123,9 @@ const policy = appPolicy.replace('# Datenschutzrichtlinie – Plenum', '# Datens
 const pages = {
   'index.html': layout({
     title: 'Plenum – Mach deine Klasse zum Plenum',
-    description: 'Bald im Microsoft Store: Plenum führt Schritt für Schritt durch die Stunde. Du präsentierst am Beamer, alle Schüler:innen antworten auf ihren Laptops oder iPads – und du siehst sofort, wo die Klasse steht. Ohne Konto, ohne Cloud.',
+    description: storeTexts['{{STORE_LEAD}}'] + ': Plenum führt Schritt für Schritt durch die Stunde. Du präsentierst am Beamer, alle Schüler:innen antworten auf ihren Laptops oder iPads – und du siehst sofort, wo die Klasse steht. Ohne Konto, ohne Cloud.',
     path: '/',
-    body: read('website/pages/index.html').replaceAll('{{STORE_BUTTON}}', storeButton),
+    body: withStore(read('website/pages/index.html')),
   }),
   'datenschutz.html': layout({
     title: 'Datenschutzerklärung – Plenum',
