@@ -65,3 +65,15 @@ test('Themenserie mit KI planen: Prompt und Aufbau der Matrix aus der Antwort', 
   assert.equal(r.series.title, 'Zellen'); assert.deepEqual(r.order.map((c) => c.title), ['Aufbau', 'Teilung']);
   assert.equal(parseSeriesPlan('kein JSON').series, null);
 });
+
+test('Themenserie mit KI planen: ohne Verzweigungen entsteht immer eine einfache Abfolge', () => {
+  const p = buildSeriesPrompt({ topic: 'Erörterung', count: 6 });
+  assert.match(p, /ohne Verzweigungen/); assert.ok(!/"nach"/.test(p), 'der Auftrag fragt nicht nach Vorgängern');
+  assert.match(buildSeriesPrompt({ topic: 'Erörterung', branch: true }), /"nach"/);
+  // Antwort mit Verzweigung wird trotzdem zur Kette
+  const plan = { themen: [{ nr: 1, titel: 'A', nach: [] }, { nr: 2, titel: 'B', nach: [1] }, { nr: 3, titel: 'C', nach: [1] }, { nr: 4, titel: 'D', nach: [2, 3] }] };
+  const lin = seriesFromPlan(plan, { linear: true });
+  assert.deepEqual(lin.series.cards.map((c) => [c.title, c.col, c.row]), [['A', 0, 0], ['B', 1, 0], ['C', 2, 0], ['D', 3, 0]]);
+  assert.equal(lin.series.links.length, 3);
+  assert.equal(seriesFromPlan(plan).series.links.length, 4, 'mit Verzweigungen bleiben die Angaben der KI');
+});

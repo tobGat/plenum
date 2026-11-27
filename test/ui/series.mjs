@@ -325,10 +325,12 @@ async function main() {
   await mustClick(w, '.libbtns [data-action="aiSeries"]', 'Mit KI planen');
   await waitFor(w, `document.getElementById('asTopic')`, 4000, 'Dialog „Themenserie mit KI planen“');
   await js(w, `document.getElementById('asTopic').value='Die Zelle'; document.getElementById('asSubject').value='Biologie'; document.getElementById('asCount').value='5'`);
+  check((await js(w, `document.getElementById('asBranch').checked`)) === false, 'Verzweigungen sind nicht standardmäßig aus');
+  await js(w, `document.getElementById('asBranch').click()`); // dieser Test prüft die verzweigte Anordnung
   await mustClick(w, '#ov [data-ai="next"]', 'Prompt erstellen');
   await waitFor(w, `document.getElementById('asAnswer')`, 3000, 'Schritt 2');
   const sprompt = await js(w, `document.querySelector('.aiprompt textarea').value`);
-  check(/Thema der Serie: Die Zelle/.test(sprompt) && /genau 5 Themen/.test(sprompt) && /KEINE Unterrichtsinhalte/.test(sprompt), 'Prompt für die Serie stimmt nicht');
+  check(/Thema der Serie: Die Zelle/.test(sprompt) && /genau 5 Themen/.test(sprompt) && /KEINE Unterrichtsinhalte/.test(sprompt) && /"nach"/.test(sprompt), 'Prompt für die Serie stimmt nicht');
   const sanswer = 'Hier ist der Plan:\n```json\n' + JSON.stringify({ titel: 'Die Zelle', fach: 'Biologie', schulstufe: '6. Schulstufe', beschreibung: 'Vom Aufbau bis zur Teilung.', themen: [
     { nr: 1, titel: 'Was ist eine Zelle?', notiz: 'Einstieg, Mikroskop', nach: [] }, { nr: 2, titel: 'Pflanzenzelle', notiz: 'Zellwand, Chloroplasten', nach: [1] }, { nr: 3, titel: 'Tierzelle', notiz: 'Vergleich', nach: [1] },
     { nr: 4, titel: 'Zellteilung', notiz: 'Mitose', nach: [2, 3] }, { nr: 5, titel: 'Wiederholung', notiz: 'Quiz', nach: [4] }] }) + '\n```';

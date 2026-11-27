@@ -10,7 +10,7 @@ const CHATS = 'z. B. ChatGPT, Microsoft Copilot, Gemini, Claude oder den KI-Chat
 const on = (box, handlers) => { box.addEventListener('click', (e) => { const b = e.target.closest('[data-ai]'); if (b && box.contains(b) && handlers[b.dataset.ai]) { e.preventDefault(); handlers[b.dataset.ai](b); } }); return box; };
 
 export function showAiSeries({ api, onCreated }) {
-  const P = { topic: '', subject: '', grade: '', count: 8, notes: '' };
+  const P = { topic: '', subject: '', grade: '', count: 8, notes: '', branch: false };
   try { Object.assign(P, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch { /* Standard */ }
   let answer = '';
 
@@ -22,6 +22,7 @@ export function showAiSeries({ api, onCreated }) {
         <label class="fl"><span class="fl-l">Fach</span><input class="field" id="asSubject" maxlength="40" value="${P.subject}" placeholder="z. B. Mathematik"></label>
         <label class="fl"><span class="fl-l">Schulstufe / Klasse</span><input class="field" id="asGrade" maxlength="40" value="${P.grade}" placeholder="z. B. 6. Schulstufe"></label>
         <label class="fl span2"><span class="fl-l">Anzahl Themen <small class="muted">– ein Thema ist eine Unterrichtseinheit</small></span><input class="field" id="asCount" type="number" min="2" max="${PLAN_MAX}" value="${P.count}" style="max-width:120px"></label>
+        <label class="fl fl-check span2"><input type="checkbox" id="asBranch" ${P.branch ? 'checked' : ''}><span class="sw"></span><span><b>Verzweigungen zulassen</b> <span class="muted">– parallele Themen, die in beliebiger Reihenfolge möglich sind. Ohne Haken entsteht eine einfache Abfolge.</span></span></label>
         <label class="fl span2"><span class="fl-l">Wünsche (optional)</span><textarea class="field" id="asNotes" rows="2" maxlength="600" placeholder="z. B. mit Wiederholung vor der Schularbeit, Lehrplanbezug, ein Projekt am Ende">${P.notes}</textarea></label>
       </div>
       <div class="ov-actions"><button class="btn" data-action="close">Abbrechen</button><button class="btn primary" data-ai="next">${ic('arrow')}Prompt erstellen</button></div>`, { wide: true });
@@ -30,6 +31,7 @@ export function showAiSeries({ api, onCreated }) {
       const v = (id) => box.querySelector(id).value.trim();
       P.topic = v('#asTopic'); P.subject = v('#asSubject'); P.grade = v('#asGrade'); P.notes = v('#asNotes');
       P.count = Math.max(2, Math.min(PLAN_MAX, parseInt(v('#asCount'), 10) || 8));
+      P.branch = box.querySelector('#asBranch').checked;
       if (!P.topic) { toast('Bitte ein Thema angeben', 'err'); box.querySelector('#asTopic').focus(); return; }
       try { localStorage.setItem(KEY, JSON.stringify(P)); } catch { /* egal */ }
       step2();
@@ -54,7 +56,7 @@ export function showAiSeries({ api, onCreated }) {
   }
   async function check() {
     let r;
-    try { r = await api('/series/plan', { method: 'POST', body: { text: answer, subject: P.subject, grade: P.grade } }); } catch (e) { return toast(e.message, 'err'); }
+    try { r = await api('/series/plan', { method: 'POST', body: { text: answer, subject: P.subject, grade: P.grade, linear: !P.branch } }); } catch (e) { return toast(e.message, 'err'); }
     const S = r.series;
     const box = overlay(html`<div class="ov-ic">${ic(S ? 'check' : 'alert')}</div><h2>${S ? S.title : 'Die Antwort konnte nicht gelesen werden'}</h2>
       ${S ? html`<p class="ov-sub">${S.cards.length} Themen als Platzhalter, ${S.links.length} ${S.links.length === 1 ? 'Pfeil' : 'Pfeile'}${S.subject ? ` · ${S.subject}` : ''}${S.grade ? ` · ${S.grade}` : ''}</p>

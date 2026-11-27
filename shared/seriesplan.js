@@ -6,10 +6,12 @@ import { newId, isObj, asArr, str } from './util.js';
 export const PLAN_MAX = 40; // höchstens so viele Themen aus einer Antwort
 const text = (v, max) => str(v).replace(/\s+/g, ' ').trim().slice(0, max);
 
-export function buildSeriesPrompt({ topic = '', subject = '', grade = '', count = 8, notes = '' } = {}) {
+// branch = false (Vorgabe): eine einfache Abfolge ohne Verzweigungen – die Themen stehen in der Reihenfolge des Unterrichts.
+// branch = true: die KI darf parallele Themen angeben („nach“).
+export function buildSeriesPrompt({ topic = '', subject = '', grade = '', count = 8, notes = '', branch = false } = {}) {
   const n = Math.max(2, Math.min(PLAN_MAX, parseInt(count, 10) || 8));
   const example = { titel: 'Titel der Themenserie', fach: subject || 'Fach', schulstufe: grade || 'Schulstufe', beschreibung: 'Ein bis zwei Sätze: Worum geht es, was können die Schüler:innen am Ende?',
-    themen: [{ nr: 1, titel: 'Erstes Thema', notiz: 'Schwerpunkt in Stichworten', nach: [] }, { nr: 2, titel: 'Zweites Thema', notiz: 'Schwerpunkt in Stichworten', nach: [1] }, { nr: 3, titel: 'Drittes Thema', notiz: 'Schwerpunkt in Stichworten', nach: [2] }] };
+    themen: ['Erstes Thema', 'Zweites Thema', 'Drittes Thema'].map((titel, i) => ({ nr: i + 1, titel, notiz: 'Schwerpunkt in Stichworten', ...(branch ? { nach: i ? [i] : [] } : {}) })) };
   return [
     'Du hilfst einer Lehrkraft, eine Themenserie (Unterrichtsreihe) zu planen. Sie wird in der Unterrichts-App „Plenum“ als Matrix aus Themenkarten angelegt.',
     '',
@@ -25,8 +27,11 @@ export function buildSeriesPrompt({ topic = '', subject = '', grade = '', count 
     '2. Die Themen bauen sinnvoll aufeinander auf: vom Einstieg über Erarbeitung und Übung bis zu Wiederholung oder Abschluss.',
     '3. „titel“: kurz und konkret, höchstens 50 Zeichen, ohne Nummer davor.',
     '4. „notiz“: Schwerpunkt oder Lernziel in Stichworten, höchstens 120 Zeichen.',
-    '5. „nach“: die Nummern der Themen, die unmittelbar vorher behandelt sein müssen. Beim ersten Thema leer ([]). In der Regel ist es das vorige Thema.',
-    '6. Verzweigungen nur, wenn zwei Themen wirklich unabhängig voneinander sind (dann haben beide denselben Vorgänger); später können sie wieder in ein gemeinsames Thema münden.',
+    ...(branch
+      ? ['5. „nach“: die Nummern der Themen, die unmittelbar vorher behandelt sein müssen. Beim ersten Thema leer ([]). Im Normalfall ist es genau das vorige Thema.',
+        '6. Eine Verzweigung (zwei Themen mit demselben Vorgänger) nur, wenn die beiden Themen wirklich unabhängig sind und in beliebiger Reihenfolge unterrichtet werden können. Im Zweifel keine Verzweigung, sondern eine einfache Abfolge.']
+      : ['5. Die Themen stehen in genau der Reihenfolge, in der sie unterrichtet werden – eine einfache Abfolge ohne Verzweigungen und ohne parallele Themen.',
+        '6. Jedes Thema baut auf dem vorigen auf; gib keine Felder für Vorgänger oder Abhängigkeiten an.']),
     '7. Antworte ausschließlich mit einem JSON-Codeblock in genau dieser Form, ohne Text davor oder danach:',
     '',
     '```json',
@@ -36,7 +41,8 @@ export function buildSeriesPrompt({ topic = '', subject = '', grade = '', count 
 }
 
 // Aus der Antwort (schon als Objekt gelesen) eine Serie bauen. Liefert { series, errors, notes }.
-export function seriesFromPlan(data, { subject = '', grade = '' } = {}) {
+// linear = true: Angaben zu Vorgängern („nach“) werden ignoriert – die Themen bilden eine einfache Kette in der gegebenen Reihenfolge.
+export function seriesFromPlan(data, { subject = '', grade = '', linear = false } = {}) {
   const errors = [], notes = [];
   if (Array.isArray(data)) data = { themen: data };
   if (isObj(data) && isObj(data.serie)) data = data.serie;
@@ -51,7 +57,7 @@ export function seriesFromPlan(data, { subject = '', grade = '' } = {}) {
   const byNr = new Map();
   topics.forEach((t, i) => { const k = Number.isFinite(+t.nr) && t.nr !== null && t.nr !== '' ? +t.nr : i + 1; if (!byNr.has(k)) byNr.set(k, i); });
   const preds = topics.map((t, i) => {
-    if (t.after === undefined || t.after === null) return i ? [i - 1] : [];
+    if (linear || t.after === undefined || t.after === null) return i ? [i - 1] : [];
     const list = [...new Set(asArr(t.after).map((v) => byNr.get(+v)).filter((j) => j !== undefined && j !== i))];
     if (asArr(t.after).length && !list.length) notes.push(`„${t.title}“: Vorgänger nicht gefunden – ohne Pfeil angelegt`);
     return list;

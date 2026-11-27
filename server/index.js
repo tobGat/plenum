@@ -151,7 +151,7 @@ export async function startServer(opts) {
   api.put('/series/:id/look', (req, res) => {
     try { return store.hasSeries(req.params.id) ? res.json({ look: store.setSeriesLook(req.params.id, isObj(req.body) ? req.body : {}) }) : fail(res, 404, 'Themenserie nicht gefunden'); } catch (e) { return fail(res, 400, e.message); }
   });
-  api.post('/series/plan', (req, res) => res.json(parseSeriesPlan(String(req.body?.text || '').slice(0, 2e6), { subject: String(req.body?.subject || ''), grade: String(req.body?.grade || '') })));
+  api.post('/series/plan', (req, res) => res.json(parseSeriesPlan(String(req.body?.text || '').slice(0, 2e6), { subject: String(req.body?.subject || ''), grade: String(req.body?.grade || ''), linear: req.body?.linear !== false })));
   api.post('/series', (req, res) => { try { res.json(store.createSeries(isObj(req.body?.series) ? req.body.series : null)); } catch (e) { fail(res, 400, e.message); } });
   api.put('/series/:id', (req, res) => {
     if (!isObj(req.body) || req.body.id !== req.params.id) return fail(res, 400, 'Ungültige Themenserie');
