@@ -42,7 +42,7 @@ async function main() {
   await waitFor(w, `document.querySelector('#content .wrap')`, 5000, 'Präsentation');
   const s = makeWin(390, 760, 'stud', 'Schüler');
   await s.loadURL(`${base}/`);
-  await waitFor(s, `document.querySelector('#content')?.innerText.includes('Diagramme lesen')`, 8000, 'Schüleransicht aus dem Paket');
+  await waitFor(s, `document.getElementById('hchap')?.textContent.includes('Diagramme lesen') && !!document.querySelector('#content .lookup')`, 8000, 'Schüleransicht aus dem Paket (Titelfolie bleibt vorne: „Schau nach vorne“)');
   await mustClick(w, '[data-action="next"]', 'Weiter');
   await waitFor(s, `document.querySelector('form.wordform')`, 4000, 'Wortwolke am Handy');
   await js(s, `(()=>{const f=document.querySelector('form.wordform'); f.querySelector('input').value='Paket'; f.requestSubmit();})()`);
