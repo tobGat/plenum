@@ -2,6 +2,7 @@
 import { html, raw, md, fmt } from '../core/dom.js';
 import { CHART_COLORS } from '/shared/palette.js';
 import { ic } from '../core/icons.js';
+import { scaleBefore } from '/shared/types/live.js';
 import { fb, ring, seg, srcLine } from '../core/parts.js';
 import { svgBar, svgHBar, svgPie } from '../charts.js';
 import { cloudSvg, snapCloud, flipCloud } from '../wordcloud.js';
@@ -58,7 +59,7 @@ export const poll = {
     return html`${d.question ? html`<div class="qbox anim">${md(d.question)}</div>` : ''}${d.hint ? html`<div class="tip anim">${ic('vote')}<span>${d.hint}</span></div>` : ''}
       <div class="vopts">${d.options.map((o, i) => { const on = sel.includes(i); return html`<button class="vopt anim${on ? ' sel' : ''}${d.multi ? ' multi' : ''}" style="--i:${i + 1}" data-action="t:vote" data-i="${i}"><span class="vk">${on ? ic('check') : ''}</span><span>${o}</span></button>`; })}</div>
       ${d.multi ? html`<button class="btn primary big" ${sel.length ? '' : 'disabled'} data-action="t:send">${ic('send')}${sent ? 'Auswahl ändern und neu abschicken' : 'Abschicken'}</button>` : ''}
-      ${sent ? fb(true, 'Deine Stimme ist gezählt. Das Ergebnis siehst du vorne. Du kannst deine Auswahl noch ändern.') : ''}`;
+      ${sent ? fb(true, `Deine Stimme ist gezählt. Das Ergebnis siehst du vorne.${c.canChange ? ' Du kannst deine Auswahl noch ändern.' : ''}`) : ''}`;
   },
   studentActions: {
     vote(el, c) { const i = +el.dataset.i, d = c.p.data; if (d.multi) { const s = c.local.sel; const k = s.indexOf(i); k >= 0 ? s.splice(k, 1) : s.push(i); c.local.sent = false; c.render(); } else { c.local.sel = [i]; c.local.sent = true; c.render(); c.submit({ choices: [i] }); } },
@@ -75,21 +76,35 @@ export const scale = {
       return html`${s.question ? html`<div class="qbox anim">${md(s.question)}</div>` : ''}<div class="esum sr-sum"><span></span><span class="sr-key"><b>1</b> = ${s.minLabel}<i>…</i><b>${s.steps}</b> = ${s.maxLabel}</span></div>
         <div class="scalerows">${s.statements.map((st) => html`<div class="scalerow card"><div class="sr-h"><span class="sr-t">${st}</span></div><div class="sr-boxes">${Array.from({ length: s.steps }, (_, k) => html`<span class="sr-box">${k + 1}</span>`)}</div></div>`)}</div>${discussion(s, s.statements.length + 2)}`;
     }
+    const keyHtml = html`<span class="sr-key"><b>1</b> = ${s.minLabel}<i>…</i><b>${s.steps}</b> = ${s.maxLabel}</span>`;
+    // Noch keine Antworten: die Aussagen groß zum Vorlesen, die Auswertung erscheint mit der ersten Antwort
+    if (!a.students) {
+      return html`${s.question ? html`<div class="qbox anim">${md(s.question)}</div>` : ''}<ol class="scwait${s.statements.length >= 4 ? ' two' : ''}">${s.statements.map((st, i) => html`<li class="card anim" style="--i:${i + 1}"><span class="scn">${i + 1}</span><span>${st}</span></li>`)}</ol>
+        <div class="scwait-f anim" style="--i:${s.statements.length + 1}">${keyHtml}<span class="scwait-t">${ic('clock')}Wartet auf Antworten …</span></div>${discussion(s, s.statements.length + 2)}`;
+    }
+    // Vorher/Nachher: frühere Skala derselben Lektion mit gleichen Aussagen
+    const before = c.lesson && c.aggOf ? scaleBefore(c.lesson, s) : null, ba = before ? c.aggOf(before.slideId) : null;
+    const prevOf = (i) => { const k = before && ba && ba.items ? before.map[i] : -1, it = k >= 0 ? ba.items[k] : null; return it && it.n ? it.mean : null; };
+    const pos = (m) => (((m - 0.5) / s.steps) * 100).toFixed(1); // Mitte der Säule von Stufe m
     const rows = s.statements.map((st, i) => {
-      const x = a.items[i] || { counts: {}, n: 0, mean: null }, m = x.mean;
-      return html`<div class="scalerow card anim" style="--i:${i + 1}"><div class="sr-h"><span class="sr-t">${st}</span><span class="sr-m">${m == null ? '–' : fmt(m)}<small>Ø · n = ${x.n}</small></span></div>
-        <div class="sr-track"><div class="wbar" data-w="${m == null ? 0 : (((m - 1) / (s.steps - 1)) * 100).toFixed(1)}" style="width:0%"></div>${Array.from({ length: s.steps }, (_, k) => html`<span class="sr-tick" style="left:${(k / (s.steps - 1)) * 100}%">${k + 1}</span>`)}</div>
-        <div class="ebar sr-dist">${Array.from({ length: s.steps }, (_, k) => seg(`${s.id}|${i}|${k}`, x.counts[k + 1] || 0, x.n, stepColor(k, s.steps), String(k + 1), k / Math.max(1, s.steps - 1) < 0.5 ? 'lt' : '', ': '))}</div></div>`;
+      const x = a.items[i] || { counts: {}, n: 0, mean: null }, m = x.mean, pm = prevOf(i), max = Math.max(1, ...Object.values(x.counts));
+      const d = m != null && pm != null ? m - pm : null;
+      return html`<div class="scrow card anim" style="--i:${i + 1}"><div class="sc-t">${st}</div>
+        <div class="sc-chart"><div class="sc-cols">${Array.from({ length: s.steps }, (_, k) => { const n = x.counts[k + 1] || 0; return html`<div class="sc-col"><b class="sc-v">${n || ''}</b><i class="sc-bar${n ? '' : ' zero'}" style="height:${n ? Math.max(6, (n / max) * 100).toFixed(1) : 0}%;background:${stepColor(k, s.steps)}"></i></div>`; })}</div>
+          <div class="sc-ks">${Array.from({ length: s.steps }, (_, k) => html`<span>${k + 1}</span>`)}${pm != null ? html`<i class="sc-mark prev" style="left:${pos(pm)}%" title="vorher"></i>` : ''}${m != null ? html`<i class="sc-mark" style="left:${pos(m)}%"></i>` : ''}</div></div>
+        <div class="sc-mean"><span class="sc-m"><small>Ø</small>${m == null ? '–' : fmt(m)}</span><span class="sc-n">n = ${x.n}</span>
+          ${d != null ? html`<span class="sc-d${Math.abs(d) < 0.05 ? ' same' : ''}">${Math.abs(d) < 0.05 ? '= gleich' : `${d > 0 ? '▲ +' : '▼ −'}${fmt(Math.abs(d))}`}<small>vorher ${fmt(pm)}</small></span>` : ''}</div></div>`;
     });
+    const cmp = before && ba && ba.students ? html`<span class="sc-cmp">${ic('refresh')}Vergleich mit Folie ${before.index + 1}</span>` : '';
     // Die Bedeutung der Skala steht einmal oben statt unter jeder Aussage – so bleibt mehr Platz für große Schrift
-    return html`${s.question ? html`<div class="qbox anim">${md(s.question)}</div>` : ''}<div class="esum sr-sum anim"><span>${a.students} ${a.students === 1 ? 'Person hat' : 'Personen haben'} bewertet</span><span class="sr-key"><b>1</b> = ${s.minLabel}<i>…</i><b>${s.steps}</b> = ${s.maxLabel}</span></div><div class="scalerows">${rows}</div>${discussion(s, s.statements.length + 2)}`;
+    return html`${s.question ? html`<div class="qbox anim">${md(s.question)}</div>` : ''}<div class="esum sr-sum anim"><span>${cmp}</span>${keyHtml}</div><div class="scrows${s.statements.length >= 4 ? ' two' : ''}">${rows}</div>${discussion(s, s.statements.length + 2)}`;
   },
   student(d, c) {
     const vals = c.local.vals || (c.local.vals = d.mine ? d.mine.slice() : d.statements.map(() => null));
     return html`${d.question ? html`<div class="qbox anim">${md(d.question)}</div>` : ''}${d.statements.map((st, i) => html`<div class="card scale-q anim" style="--i:${i + 1}"><p class="sq-t">${st}</p>
       <div class="sq-btns" role="radiogroup">${Array.from({ length: d.steps }, (_, k) => html`<button class="sq-b${vals[i] === k + 1 ? ' on' : ''}" role="radio" aria-checked="${vals[i] === k + 1}" data-action="t:rate" data-i="${i}" data-v="${k + 1}" style="--sc:${stepColor(k, d.steps)}">${k + 1}</button>`)}</div>
       <div class="sr-lab"><span>${d.minLabel}</span><span>${d.maxLabel}</span></div></div>`)}
-      ${vals.some((v) => v !== null) ? fb(true, 'Gespeichert. Du kannst deine Bewertung noch ändern.') : ''}`;
+      ${vals.some((v) => v !== null) ? fb(true, `Gespeichert.${c.canChange ? ' Du kannst deine Bewertung noch ändern.' : ''}`) : ''}`;
   },
   studentActions: { rate(el, c) { c.local.vals[+el.dataset.i] = +el.dataset.v; c.render(); c.submit({ values: c.local.vals }); } },
 };
@@ -115,7 +130,7 @@ export const wordcloud = {
     const words = c.local.words || (c.local.words = Array.from({ length: d.maxWords }, (_, i) => (d.mine || [])[i] || ''));
     const sent = c.local.sent ?? !!d.mine;
     return html`<div class="qbox anim">${md(d.question)}</div><form class="card wordform anim" data-action="t:send">${words.map((w, i) => html`<input class="field" name="w${i}" value="${w}" maxlength="25" autocomplete="off" placeholder="Begriff ${i + 1}" aria-label="Begriff ${i + 1}">`)}
-      <button class="btn primary big">${ic('send')}${sent ? 'Begriffe ändern' : 'Abschicken'}</button></form>${sent ? fb(true, 'Danke! Deine Begriffe sind in der Wolke. Du kannst sie noch ändern.') : ''}`;
+      <button class="btn primary big">${ic('send')}${sent ? 'Begriffe ändern' : 'Abschicken'}</button></form>${sent ? fb(true, `Danke! Deine Begriffe sind in der Wolke.${c.canChange ? ' Du kannst sie noch ändern.' : ''}`) : ''}`;
   },
   studentActions: { send(el, c) { const words = [...el.querySelectorAll('input')].map((x) => x.value.trim()); c.local.words = words; if (!words.some(Boolean)) return; c.local.sent = true; c.render(); c.submit({ words: words.filter(Boolean) }); } },
 };
@@ -132,7 +147,7 @@ export const open = {
   student(d, c) {
     const mine = c.local.mine || d.mine || [], full = mine.length >= d.maxAnswers && d.maxAnswers > 1;
     return html`<div class="qbox anim">${md(d.question)}</div>${full ? '' : html`<form class="card wordform anim" data-action="t:send"><textarea class="field" name="t" maxlength="${d.maxLength}" rows="3" placeholder="Deine Antwort …" aria-label="Deine Antwort">${d.maxAnswers === 1 && mine[0] ? mine[0] : ''}</textarea>
-      <div class="formrow"><small class="muted">${d.maxAnswers > 1 ? `Antwort ${mine.length + 1} von ${d.maxAnswers}` : 'Du kannst deine Antwort noch ändern.'}</small><button class="btn primary">${ic('send')}Senden</button></div></form>`}
+      <div class="formrow"><small class="muted">${d.maxAnswers > 1 ? `Antwort ${mine.length + 1} von ${d.maxAnswers}` : c.canChange ? 'Du kannst deine Antwort noch ändern.' : ''}</small><button class="btn primary">${ic('send')}Senden</button></div></form>`}
       ${mine.length ? html`<div class="mine anim"><h4>Deine Antworten</h4>${mine.map((t) => html`<div class="wcard small">${t}</div>`)}</div>` : ''}`;
   },
   studentActions: { async send(el, c) { const t = el.querySelector('textarea').value.trim(); if (!t) return; const r = await c.submit({ text: t }); if (r && r.ok) { c.local.mine = r.mine; c.render(); } } },

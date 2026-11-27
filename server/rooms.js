@@ -53,7 +53,7 @@ export function stateAggs(lesson, d, { extraWords = [] } = {}) {
   return { aggs, online: cids.size, changed, name: String((d && d.name) || 'Stand').slice(0, 60), savedAt: String((d && d.savedAt) || '') };
 }
 
-export function createRooms({ io, store, extraWords = () => [] }) {
+export function createRooms({ io, store, extraWords = () => [], maxChanges = () => 2 }) {
   let room = null;
   const sockS = () => io.sockets.adapter.rooms.get('s') || new Set();
   const online = () => sockS().size;
@@ -90,6 +90,7 @@ export function createRooms({ io, store, extraWords = () => [] }) {
     const s = slideOf(sid) || room.lesson.slides[0];
     const def = TYPES[s.type], sec = sectionOf(room.lesson, s);
     const ctx = { cid, group: groupOf(cid, s.id), mine: room.subs[s.id]?.[cid], meta: room.meta[s.id], now: Date.now() };
+    const lock = lockOf(s, cid);
     // Folien ohne Aufgabe bleiben am Beamer, außer die Lektion zeigt sie ausdrücklich auch auf den Geräten
     const hidden = room.sync && !!def.passive && !room.lesson.studentSlides;
     if (s.type === 'leaderboard') {
@@ -97,7 +98,7 @@ export function createRooms({ io, store, extraWords = () => [] }) {
       ctx.me = { rank: me ? me.rank : null, total: me ? me.total : 0, nick: nickOf(cid), players: r.length };
     }
     return { id: s.id, type: s.type, index: room.lesson.slides.indexOf(s), total: room.lesson.slides.length, hostIndex: room.lesson.slides.findIndex((x) => x.id === room.slideId),
-      sync: room.sync, section: { name: sec.name, color: sec.color, icon: sec.icon }, theme: room.lesson.theme || 'standard', hidden, graphic: hidden ? null : graphicFor(s), data: !hidden && def.toStudent ? def.toStudent(s, ctx) : { title: s.title } };
+      sync: room.sync, section: { name: sec.name, color: sec.color, icon: sec.icon }, theme: room.lesson.theme || 'standard', hidden, graphic: hidden ? null : graphicFor(s), ...(lock ? { lock } : {}), data: !hidden && def.toStudent ? def.toStudent(s, ctx) : { title: s.title } };
   }
   const studentSockets = () => [...sockS()].map((id) => io.sockets.sockets.get(id)).filter((so) => so && so.data.cid);
   const pushStudent = (so) => so.emit('slide', payloadFor(so.data.cid));
@@ -107,6 +108,19 @@ export function createRooms({ io, store, extraWords = () => [] }) {
     toHost('agg', { slideId: s.id, data: aggOf(s) });
     if (s.type === 'quiz') room.lesson.slides.filter((x) => x.type === 'leaderboard').forEach((x) => { toHost('agg', { slideId: x.id, data: aggOf(x) }); pushOnSlide(x.id); });
   }
+  // Sperre gegen ständiges Umstimmen: je Folie und Gerät zählt der Server die Änderungen (room.chg). Ist die Grenze
+  // erreicht, bleibt die letzte Antwort gezählt und lässt sich bei dieser Aufgabe nicht mehr ändern. −1 = unbegrenzt.
+  const limit = () => { const n = maxChanges(); return Number.isInteger(n) && n >= 0 ? n : -1; };
+  const canChange = (s) => !!TYPES[s.type].changes && !(s.type === 'open' && s.maxAnswers > 1);
+  function lockOf(s, cid) {
+    const max = limit();
+    if (max < 0 || !canChange(s) || room.subs[s.id]?.[cid] == null) return null;
+    const left = Math.max(0, max - (room.chg[s.id]?.[cid] || 0));
+    return { left, max, locked: left === 0 };
+  }
+  // Für die Lehrkraft nur die Anzahl der Geräte, die ihre Änderungen aufgebraucht haben – ohne Zuordnung
+  const lockedOn = (sid) => { const max = limit(); return max > 0 ? Object.entries(room.chg[sid] || {}).filter(([cid, n]) => n >= max && room.subs[sid]?.[cid] != null).length : 0; };
+  const pushLocked = () => toHost('locked', { slideId: room.slideId, n: lockedOn(room.slideId) });
   // Anwesenheit: nur die Anzahl der Geräte, die Plenum gerade nicht im Vordergrund haben – ohne Zuordnung
   const away = () => studentSockets().filter((so) => so.data.away).length;
   const pushAway = () => toHost('away', away());
@@ -116,7 +130,7 @@ export function createRooms({ io, store, extraWords = () => [] }) {
     if (!room) return { presenting: false };
     const aggs = {};
     for (const s of room.lesson.slides) { const a = aggOf(s); if (a) aggs[s.id] = a; }
-    return { presenting: true, lesson: room.lesson, slideId: room.slideId, sync: room.sync, aggs, online: online(), away: away(), slot: room.slot, changed: room.changed, freeNicks: room.freeNicks, players: players() };
+    return { presenting: true, lesson: room.lesson, slideId: room.slideId, sync: room.sync, aggs, online: online(), away: away(), locked: lockedOn(room.slideId), slot: room.slot, changed: room.changed, freeNicks: room.freeNicks, players: players() };
   }
 
   // ---------- Stände (automatisch und benannt) ----------
@@ -147,7 +161,7 @@ export function createRooms({ io, store, extraWords = () => [] }) {
     const d = store.loadState(room.lesson.id, stateId);
     if (!d) return false;
     const subs = isObj(d.subs) ? d.subs : {}, fps = isObj(d.fingerprints) ? d.fingerprints : {};
-    Object.assign(room, { subs: {}, meta: {}, orphans: {}, orphanFps: {}, changed: [] });
+    Object.assign(room, { subs: {}, meta: {}, chg: {}, orphans: {}, orphanFps: {}, changed: [] });
     for (const [sid, per] of Object.entries(subs)) {
       if (!isObj(per)) continue;
       const s = slideOf(sid);
@@ -181,7 +195,7 @@ export function createRooms({ io, store, extraWords = () => [] }) {
       const lesson = store.get(lessonId);
       if (!lesson || !lesson.slides.length) return { error: 'Lektion nicht gefunden oder leer' };
       if (room) { flush(); stopTimers(); }
-      room = { lesson, slideId: lesson.slides[0].id, sync: true, subs: {}, meta: {}, cids: new Set(), order: {}, nextIdx: 0, nicks: {}, pos: {},
+      room = { lesson, slideId: lesson.slides[0].id, sync: true, subs: {}, meta: {}, chg: {}, cids: new Set(), order: {}, nextIdx: 0, nicks: {}, pos: {},
         slot: null, changed: [], orphans: {}, orphanFps: {}, timers: {}, saveTimer: null, freeNicks: false, autoSaved: false };
       if (stateId) loadState(stateId);
       attachConnected();
@@ -201,6 +215,7 @@ export function createRooms({ io, store, extraWords = () => [] }) {
       if (!room || !slideOf(sid)) return;
       room.slideId = sid; dirty();
       toHost('slideChanged', { slideId: sid });
+      pushLocked();
       if (room.sync) pushAll(); else studentSockets().forEach((so) => so.emit('hostSlide', room.lesson.slides.findIndex((x) => x.id === sid)));
     },
     setSync(on) { if (!room) return; room.sync = !!on; dirty(); toHost('syncChanged', { sync: room.sync }); pushAll(); },
@@ -208,9 +223,9 @@ export function createRooms({ io, store, extraWords = () => [] }) {
       const s = slideOf(sid);
       if (!s) return;
       if (room.timers[sid]) { clearTimeout(room.timers[sid].a); clearTimeout(room.timers[sid].b); }
-      delete room.subs[sid]; delete room.meta[sid];
+      delete room.subs[sid]; delete room.meta[sid]; delete room.chg[sid];
       room.changed = room.changed.filter((x) => x !== sid);
-      dirty(); pushAgg(s); pushOnSlide(sid);
+      dirty(); pushAgg(s); pushOnSlide(sid); pushLocked();
     },
     quiz(sid, action) {
       const s = slideOf(sid);
@@ -291,7 +306,7 @@ export function createRooms({ io, store, extraWords = () => [] }) {
     clearRoom() {
       if (!room) return { ok: false };
       saveNow(); stopTimers();
-      Object.assign(room, { slideId: room.lesson.slides[0].id, sync: true, subs: {}, meta: {}, orphans: {}, orphanFps: {}, changed: [], slot: null, autoSaved: false, pos: {}, timers: {} });
+      Object.assign(room, { slideId: room.lesson.slides[0].id, sync: true, subs: {}, meta: {}, chg: {}, orphans: {}, orphanFps: {}, changed: [], slot: null, autoSaved: false, pos: {}, timers: {} });
       pushAll();
       return { ok: true, ...hostState() };
     },
@@ -300,7 +315,7 @@ export function createRooms({ io, store, extraWords = () => [] }) {
       if (!room || lesson.id !== room.lesson.id) return { ok: false };
       const oldFp = Object.fromEntries(room.lesson.slides.map((s) => [s.id, fingerprint(s)]));
       room.lesson = lesson;
-      for (const sid of Object.keys(room.subs)) { const s = slideOf(sid); if (!s || oldFp[sid] !== fingerprint(s)) { delete room.subs[sid]; delete room.meta[sid]; } }
+      for (const sid of Object.keys(room.subs)) { const s = slideOf(sid); if (!s || oldFp[sid] !== fingerprint(s)) { delete room.subs[sid]; delete room.meta[sid]; delete room.chg[sid]; } }
       if (!slideOf(room.slideId)) room.slideId = lesson.slides[0].id;
       dirty();
       io.to('s').emit('lesson', { outline: outline(lesson), title: lesson.title, theme: lesson.theme || 'standard' });
@@ -333,10 +348,18 @@ export function createRooms({ io, store, extraWords = () => [] }) {
       const prev = room.subs[sid]?.[cid];
       const v = def.accept(s, data, { cid, prev, group: groupOf(cid, sid), meta: room.meta[sid] || {}, now: Date.now(), newId: () => newId('a') });
       if (v == null) return { ok: false };
+      // Änderung einer schon abgegebenen Antwort: zählen; ist die Grenze erreicht, ablehnen und dem Gerät die gezählte Antwort zeigen
+      const max = limit(), isChange = max >= 0 && prev != null && canChange(s) && def.changes(prev, v, s);
+      if (isChange) {
+        const n = room.chg[sid]?.[cid] || 0;
+        if (n >= max) { pushStudent(socket); return { ok: false, locked: true }; }
+        (room.chg[sid] || (room.chg[sid] = {}))[cid] = n + 1;
+      }
       (room.subs[sid] || (room.subs[sid] = {}))[cid] = v;
       dirty(); pushAgg(s);
+      if (isChange && sid === room.slideId) pushLocked();
       if (s.type === 'quiz') return { ok: true };
-      return { ok: true, mine: s.type === 'open' ? v.map((a) => a.text) : s.type === 'poll' ? v.c : v };
+      return { ok: true, lock: lockOf(s, cid), mine: s.type === 'open' ? v.map((a) => a.text) : s.type === 'poll' ? v.c : v };
     },
     setAway(socket, on) {
       const v = on === true;

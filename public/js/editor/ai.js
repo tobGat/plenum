@@ -1,6 +1,6 @@
 // „Mit KI erstellen“ und „Mit KI überarbeiten“: Plenum schreibt einen Prompt für einen beliebigen KI-Chat,
 // die Lehrkraft fügt die Antwort wieder ein. Plenum selbst sendet dabei nichts ins Internet.
-// Material (Buchseiten, Arbeitsblätter, Fotos) hängt die Lehrkraft direkt im KI-Chat an – in Plenum gibt sie nur an,
+// Eigenes Material (Arbeitsblätter, Unterlagen, Tafelbilder) hängt die Lehrkraft direkt im KI-Chat an – in Plenum gibt sie nur an,
 // dass und welches Material dabei ist; der Prompt erklärt der KI, wie sie es nutzen soll.
 import { html, toast, copyText } from '../core/dom.js';
 import { ic } from '../core/icons.js';
@@ -38,13 +38,13 @@ function on(box, handlers) { box.addEventListener('click', (e) => { const b = e.
 export const createMaterial = () => ({ on: false, desc: '', use: 'buch' });
 const forPrompt = (M) => (M.on ? { desc: M.desc } : null);
 function materialSection(M, { withUse = true } = {}) {
-  return html`<div class="fl span2 matsec"><label class="fl fl-check"><input type="checkbox" id="matOn" ${M.on ? 'checked' : ''}><span class="sw"></span><span><b>Ich hänge im KI-Chat Material an</b> <span class="muted">– z. B. Fotos von Buchseiten, Arbeitsblätter, Tafelbilder</span></span></label>
+  return html`<div class="fl span2 matsec"><label class="fl fl-check"><input type="checkbox" id="matOn" ${M.on ? 'checked' : ''}><span class="sw"></span><span><b>Ich hänge im KI-Chat Material an</b> <span class="muted">– z. B. eigene Arbeitsblätter, Unterlagen, Tafelbilder</span></span></label>
     <div id="matMore" ${M.on ? '' : 'hidden'}>
-      <input class="field" id="matDesc" maxlength="200" value="${M.desc}" placeholder="Was ist es? z. B. Buch S. 40–42, Ü2–Ü4 (optional)" aria-label="Beschreibung des Materials">
+      <input class="field" id="matDesc" maxlength="200" value="${M.desc}" placeholder="Was ist es? z. B. Arbeitsblatt „Brüche“, Aufgaben 2–4 (optional)" aria-label="Beschreibung des Materials">
       ${withUse ? html`<div class="matuse">
-        <label class="radio"><input type="radio" name="matUse" value="buch" ${M.use !== 'orient' ? 'checked' : ''}><span><b>Mit dem Material arbeiten</b><small>Aufgaben aus Buch oder Arbeitsblatt einbinden – mit eigener Folie „Zuerst im Buch …“ davor</small></span></label>
-        <label class="radio"><input type="radio" name="matUse" value="orient" ${M.use === 'orient' ? 'checked' : ''}><span><b>Nur zur Orientierung</b><small>Thema, Begriffe und Niveau übernehmen, aber eigene Aufgaben ohne Buch</small></span></label></div>` : ''}
-      <small class="muted">Die Dateien hängst du im nächsten Schritt direkt im KI-Chat an (Büroklammer, hineinziehen oder Strg+V). Bitte nur Material verwenden, das du an den KI-Dienst weitergeben darfst, und keine Fotos oder Namen von Schüler:innen.</small>
+        <label class="radio"><input type="radio" name="matUse" value="buch" ${M.use !== 'orient' ? 'checked' : ''}><span><b>Mit dem Material arbeiten</b><small>Aufgaben vom Arbeitsblatt einbinden – mit eigener Folie „Zuerst am Arbeitsblatt …“ davor</small></span></label>
+        <label class="radio"><input type="radio" name="matUse" value="orient" ${M.use === 'orient' ? 'checked' : ''}><span><b>Nur zur Orientierung</b><small>Thema, Begriffe und Niveau übernehmen, aber eigene Aufgaben ohne das Material</small></span></label></div>` : ''}
+      <small class="muted">Die Dateien hängst du im nächsten Schritt direkt im KI-Chat an (Büroklammer, hineinziehen oder Strg+V). Bitte nur eigenes oder frei verwendbares Material anhängen, das du an den KI-Dienst weitergeben darfst – keine urheberrechtlich geschützten Werke und keine Fotos oder Namen von Schüler:innen.</small>
     </div></div>`;
 }
 function wireMaterial(box, M) {
@@ -87,14 +87,15 @@ const unreadable = (answer) => (answer.includes(NO_FILES_REPLY.slice(0, -1))
   : html`<p class="ov-sub">Prüfe, ob du die ganze Antwort kopiert hast. Oft hilft es, den KI-Chat zu bitten: „Bitte gib nur den vollständigen JSON-Codeblock aus.“</p>`);
 
 // ---------- Neue Lektion ----------
-export function showAiCreate({ api, onImported }) {
-  const P = { topic: '', subject: '', grade: '', count: 12, countMode: 'exact', countMin: 8, countMax: 15, types: DEFAULT_TYPES, notes: '', ...loadPrefs() };
+// preset: Vorgaben für Thema, Fach und Schulstufe (z. B. aus einer Platzhalter-Karte einer Themenserie)
+export function showAiCreate({ api, onImported, preset = null }) {
+  const P = { topic: '', subject: '', grade: '', count: 12, countMode: 'exact', countMin: 8, countMax: 15, types: DEFAULT_TYPES, notes: '', ...loadPrefs(), ...(preset || {}) };
   const M = createMaterial();
   let answer = '', videoText = '', videos = [];
 
   function form() {
     const box = overlay(html`<div class="ov-ic">${ic('sparkles')}</div><h2>Mit KI erstellen</h2>
-      <p class="ov-sub">Plenum schreibt einen Auftrag (Prompt) für einen KI-Chat deiner Wahl – auf Wunsch passend zu Buchseiten oder anderem Material. Die Antwort fügst du hier wieder ein und bekommst eine fertige Lektion zum Bearbeiten. Plenum selbst sendet dabei nichts ins Internet.</p>
+      <p class="ov-sub">Plenum schreibt einen Auftrag (Prompt) für einen KI-Chat deiner Wahl – auf Wunsch passend zu eigenem Material wie Arbeitsblättern. Die Antwort fügst du hier wieder ein und bekommst eine fertige Lektion zum Bearbeiten. Plenum selbst sendet dabei nichts ins Internet.</p>
       <div class="aiform">
         <label class="fl span2"><span class="fl-l">Thema<i class="req">*</i><small class="muted">– oder unten Material ankreuzen bzw. einen Video-Link eintragen</small></span><input class="field" id="aiTopic" maxlength="200" value="${P.topic}" placeholder="z. B. Photosynthese, Bruchrechnen, Kommasetzung, Wiener Kongress"></label>
         <label class="fl"><span class="fl-l">Fach</span><input class="field" id="aiSubject" maxlength="40" value="${P.subject}" placeholder="z. B. Biologie"></label>
@@ -181,7 +182,7 @@ export function diffLessons(oldL, newL) {
 export function showAiRevise({ api, lessonId, lesson = null, onApply = null, onImported = null }) {
   let L0 = lesson, wish = '', answer = '', videoText = '', videos = [];
   const M = createMaterial();
-  const SUGGEST = ['Sprache vereinfachen', 'Zwei Quizfragen mit Rangliste ergänzen', 'Mehr Live-Umfragen einbauen', 'Für eine jüngere Klasse anpassen', 'Rechtschreibung und Zeichensetzung prüfen', 'Einen Arbeitsauftrag für Gruppen ergänzen', 'Aufgaben zu angehängten Buchseiten ergänzen'];
+  const SUGGEST = ['Sprache vereinfachen', 'Zwei Quizfragen mit Rangliste ergänzen', 'Mehr Live-Umfragen einbauen', 'Für eine jüngere Klasse anpassen', 'Rechtschreibung und Zeichensetzung prüfen', 'Einen Arbeitsauftrag für Gruppen ergänzen', 'Aufgaben zum angehängten Arbeitsblatt ergänzen'];
 
   async function start() {
     if (!L0) { try { L0 = await api(`/lessons/${lessonId}`); } catch (e) { return toast(e.message, 'err'); } }

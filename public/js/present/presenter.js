@@ -3,14 +3,38 @@ import { html, raw, esc, delegate, fmt, toast, whenStr, copyText } from '../core
 import { ic, logo } from '../core/icons.js';
 import { fit, autoFit } from '../core/fit.js';
 import { overlay, closeOv, ask, ovOpen } from '../core/overlay.js';
-import { shead, colorOf, ring, animWidths, resetSegs, resetRings, applyTheme, themeCols, withGraphic, awayBadge } from '../core/parts.js';
+import { shead, colorOf, ring, animWidths, resetSegs, resetRings, applyTheme, themeCols, withGraphic, awayBadge, lockBadge } from '../core/parts.js';
 import { CH, chartReset } from '../charts.js';
 import { RENDER } from '../types/index.js';
 import { TYPES } from '/shared/types/index.js';
 
 const SELF = ['mc', 'truefalse', 'sort'];
 
-export function createPresenter({ root, socket, api, info, onExit }) {
+export function createPresenter({ root, socket, api, info, onExit, onNext, seriesId }) {
+  // Liegt die Lektion in einer Themenserie, wird am Ende gefragt, ob es mit dem nächsten Thema weitergehen soll
+  let nextInfo = [];
+  async function loadNext() {
+    try { const list = await api(`/lessons/${S.lesson.id}/next`); nextInfo = list.sort((a, b) => (b.seriesId === seriesId) - (a.seriesId === seriesId)); } catch { nextInfo = []; }
+    if (S) render();
+  }
+  const nextOptions = () => { const first = nextInfo[0]; return first && (first.seriesId === seriesId || nextInfo.length === 1) ? [first] : nextInfo; };
+  // stopped = die Präsentation ist schon beendet (Frage beim Beenden); sonst Frage auf der letzten Folie
+  function askNext(stopped) {
+    const groups = nextOptions();
+    const startNext = (id, sid) => { closeOv(); if (stopped) onNext(id, sid); else socket.emit('host:stop', () => onNext(id, sid)); };
+    const box = overlay(html`<div class="ov-ic">${ic('arrow')}</div><h2>Mit dem nächsten Thema fortsetzen?</h2>
+      ${groups.map((g) => html`<p class="ov-sub">„${S.lesson.title}“ gehört zur Themenserie <b>„${g.seriesTitle}“</b>. ${g.next.length === 1 ? 'Danach kommt:' : 'Danach geht es hier weiter:'}</p>
+        <div class="menu nextmenu">${g.next.map((n) => html`<button class="btn primary" data-next="${n.lesson}" data-series="${g.seriesId}">${ic('play')}<span>${n.title}${n.skipped.length ? html`<small>übersprungen (noch ohne Präsentation): ${n.skipped.join(', ')}</small>` : ''}</span></button>`)}</div>`)}
+      <p class="muted small">Die Geräte der Klasse wechseln von selbst mit. Der Stand dieser Lektion bleibt gespeichert.</p>
+      <div class="ov-actions">${stopped ? '' : html`<button class="btn" data-next="_stay">Hier bleiben</button>`}<button class="btn" data-next="_back" title="${stopped ? '' : 'Beendet die Präsentation; der Stand bleibt gespeichert'}">${ic('arrowl')}${seriesId ? 'Zurück zur Themenserie' : 'Zurück zur Übersicht'}</button></div>`, { closable: !stopped });
+    box.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-next]'); if (!b) return;
+      const v = b.dataset.next;
+      if (v === '_stay') closeOv();
+      else if (v === '_back') { closeOv(); if (stopped) onExit(); else socket.emit('host:stop', () => onExit()); } // zurück dorthin, wo gestartet wurde
+      else startNext(v, b.dataset.series);
+    });
+  }
   let S = null; // Zustand vom Server: { lesson, slideId, sync, aggs, online, slot, changed, players, freeNicks }
   let lastId = null, savedAt = 0, full = false, adapter = info.settings?.adapter || '';
   const prefs = {}, local = {};
@@ -32,7 +56,7 @@ export function createPresenter({ root, socket, api, info, onExit }) {
 
   function ctxFor(s) {
     const i = S.lesson.slides.indexOf(s);
-    return { lesson: S.lesson, sec: secCol(secOf(s)), agg: S.aggs[s.id], prefs: prefs[s.id] || (prefs[s.id] = {}), local: local[s.id] || (local[s.id] = {}), key: 'c',
+    return { lesson: S.lesson, sec: secCol(secOf(s)), agg: S.aggs[s.id], aggOf: (id) => S.aggs[id] || null, prefs: prefs[s.id] || (prefs[s.id] = {}), local: local[s.id] || (local[s.id] = {}), key: 'c',
       online: S.online, joinUrl: joinUrl(), next: S.lesson.slides[i + 1], render: () => renderBody(false), goto, theme: S.lesson.theme || 'standard', mediaUrl };
   }
 
@@ -47,7 +71,11 @@ export function createPresenter({ root, socket, api, info, onExit }) {
     $('pbar').style.width = `${((idx + 1) / n) * 100}%`;
     $('tabs').innerHTML = String(html`${S.lesson.sections.filter((x) => S.lesson.slides.some((y) => y.section === x.id)).map((x) => html`<button class="${x.id === sec.id ? 'on' : ''}" style="--tc:${colorOf(x.color).c}" data-action="sec" data-id="${x.id}" role="tab" aria-selected="${x.id === sec.id}"><i></i>${x.name}</button>`)}`);
     $('dots').innerHTML = String(html`<select id="jump" aria-label="Folie wählen" data-change="jump">${S.lesson.sections.map((x) => html`<optgroup label="${x.name}">${S.lesson.slides.map((y, j) => (y.section === x.id ? html`<option value="${y.id}" ${y.id === s.id ? 'selected' : ''}>${j + 1}. ${y.title}</option>` : ''))}</optgroup>`)}</select>`);
-    $('prev').disabled = idx === 0; $('next').disabled = idx === n - 1;
+    $('prev').disabled = idx === 0; const more = idx === n - 1 && nextOptions().length > 0; // letzte Folie: weiter in der Themenserie
+    $('next').disabled = idx === n - 1 && !more;
+    $('next').classList.toggle('nextseries', more);
+    $('next').title = more ? 'Weiter mit dem nächsten Thema der Themenserie' : '';
+    $('next').firstElementChild.textContent = more ? 'Nächstes Thema' : 'Weiter';
     renderRoom();
     renderBody(fresh);
     if (fresh) { lastId = s.id; const t = $('tabs').querySelector('.on'); if (t && t.scrollIntoView) t.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
@@ -81,7 +109,7 @@ export function createPresenter({ root, socket, api, info, onExit }) {
   const refresh = () => { content.classList.remove('enter'); renderBody(false); };
 
   function renderRoom() {
-    $('hroom').innerHTML = String(html`<span class="livebadge"><span class="pulse"></span><b>${S.online}</b> online</span>${awayBadge(S.away)}
+    $('hroom').innerHTML = String(html`<span class="livebadge"><span class="pulse"></span><b>${S.online}</b> online</span>${awayBadge(S.away)}${lockBadge(S.locked)}
       <button class="hbtn" data-action="join" title="Link und QR-Code zum Mitmachen">${ic('qr')}<span>Beitreten</span></button>
       <button class="hbtn${S.slot ? ' saved' : ''}" data-action="states" title="${S.slot ? `Stand „${S.slot.name}“ – wird automatisch gespeichert${savedAt ? `, zuletzt um ${new Date(savedAt).toLocaleTimeString('de-AT', { hour: '2-digit', minute: '2-digit' })}` : ''}` : 'Stand speichern oder laden'}">${ic('save')}<span>${S.slot ? S.slot.name : 'Speichern'}</span></button>
       <button class="hbtn" data-action="moderation" title="Moderationsfenster (z. B. am Laptop, während der Beamer die Folie zeigt)">${ic('settings')}<span>Moderation</span></button>
@@ -108,8 +136,8 @@ export function createPresenter({ root, socket, api, info, onExit }) {
   }
 
   // ---------- Steuerung ----------
-  function goto(id) { if (!S.lesson.slides.some((s) => s.id === id)) return; S.slideId = id; socket.emit('host:slide', id); render(); content.scrollTop = 0; }
-  const go = (d) => { const i = S.lesson.slides.indexOf(cur()) + d; if (i >= 0 && i < S.lesson.slides.length) goto(S.lesson.slides[i].id); };
+  function goto(id) { if (!S.lesson.slides.some((s) => s.id === id)) return; S.slideId = id; S.locked = 0; socket.emit('host:slide', id); render(); content.scrollTop = 0; }
+  const go = (d) => { const i = S.lesson.slides.indexOf(cur()) + d; if (i >= 0 && i < S.lesson.slides.length) goto(S.lesson.slides[i].id); else if (d > 0 && nextOptions().length) askNext(false); };
 
   async function showJoin() {
     try { Object.assign(info, await api('/info')); } catch { /* Netz geändert? alte Daten verwenden */ }
@@ -154,7 +182,7 @@ export function createPresenter({ root, socket, api, info, onExit }) {
     delState: async (el) => { if (await ask(`Stand „${el.dataset.name}“ löschen?`, 'Das lässt sich nicht rückgängig machen.', { ok: 'Löschen', danger: true })) socket.emit('host:deleteState', el.dataset.id, (r) => { if (r && r.ok) { S.slot = r.slot; renderRoom(); } showStates(); }); else showStates(); },
     saveState: (el) => socket.emit('host:saveAs', el.querySelector('input').value, (r) => { if (r && r.ok) { S.slot = r.slot; savedAt = Date.now(); renderRoom(); showStates(); toast(`Gespeichert als „${r.slot.name}“`); } else toast(r?.error || 'Speichern nicht möglich', 'err'); }),
     clearRoom: async () => { if (await ask('Neu beginnen?', S.slot ? `„${S.slot.name}“ bleibt gespeichert.` : 'Der bisherige Stand wird als „Letzte Sitzung“ gesichert.', { ok: 'Neu beginnen' })) socket.emit('host:clearRoom', (r) => { if (r && r.ok) applyState(r); }); },
-    exit: async () => { if (await ask('Präsentation beenden?', 'Die Geräte der Klasse werden getrennt. Der Stand bleibt gespeichert.', { ok: 'Beenden' })) socket.emit('host:stop', () => onExit()); },
+    exit: async () => { if (await ask('Präsentation beenden?', 'Die Geräte der Klasse werden getrennt. Der Stand bleibt gespeichert.', { ok: 'Beenden' })) socket.emit('host:stop', () => (nextOptions().length ? askNext(true) : onExit())); },
   };
   const changeActions = {
     jump: (el) => goto(el.value),
@@ -185,15 +213,16 @@ export function createPresenter({ root, socket, api, info, onExit }) {
     on('agg', (d) => { if (!S) return; S.aggs[d.slideId] = d.data; if (d.slideId === S.slideId) refresh(); }),
     on('online', (n) => { if (!S) return; S.online = n; renderRoom(); const s = cur(); if (TYPES[s.type].live) refresh(); }),
     on('away', (n) => { if (S && S.away !== n) { S.away = n; renderRoom(); } }),
+    on('locked', (d) => { if (S && d.slideId === S.slideId && S.locked !== d.n) { S.locked = d.n; renderRoom(); } }),
     on('players', (p) => { if (S) S.players = p; }),
     on('saved', (d) => { savedAt = d.at; if (S) { S.slot = d.slot || S.slot; renderRoom(); } }),
-    on('slideChanged', (d) => { if (S && d.slideId !== S.slideId) { S.slideId = d.slideId; render(); } }),
+    on('slideChanged', (d) => { if (S && d.slideId !== S.slideId) { S.slideId = d.slideId; S.locked = 0; render(); } }),
     on('syncChanged', (d) => { if (S) { S.sync = d.sync; renderRoom(); } }),
   ];
 
   window.plenumApp?.setPresenting?.(true);
   return {
-    show(state) { S = state; lastId = null; render(); if (!(state.online > 0)) showJoin(); },
+    show(state) { S = state; lastId = null; render(); if (!(state.online > 0)) showJoin(); loadNext(); },
     update(state) { applyState(state); },
     destroy() { offs.forEach((f) => f()); undel.forEach((f) => f()); clearInterval(ticker); document.removeEventListener('keydown', onKey); document.removeEventListener('fullscreenchange', onDocFull); if (offFull) offFull(); leaveFull(); window.plenumApp?.setPresenting?.(false); },
     get state() { return S; },

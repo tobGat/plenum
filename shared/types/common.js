@@ -25,3 +25,9 @@ export function shuffled(arr, seed) {
 export const fp = (...parts) => hash(JSON.stringify(parts));
 export const okInt = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
 export const countBy = (vals) => vals.reduce((m, v) => { m[v] = (m[v] || 0) + 1; return m; }, {});
+
+// Sperre gegen ständiges Umstimmen: Was zählt als Änderung einer schon abgegebenen Antwort?
+// changedAny: die Antwort ist eine andere · changedSlot: eine schon gegebene Teilantwort wurde überschrieben
+// (das erste Ausfüllen weiterer Teilantworten zählt nicht).
+export const changedAny = (prev, v) => JSON.stringify(prev) !== JSON.stringify(v);
+export const changedSlot = (prev, v) => Array.isArray(prev) && Array.isArray(v) && prev.some((x, i) => x !== null && x !== undefined && x !== v[i]);

@@ -5,9 +5,9 @@ Umfragen, Wortwolken, Skalen, offene Antworten, Quiz mit Rangliste und Aufgaben 
 Selbstkontrolle. Beitritt per Link oder QR-Code im lokalen Netz – ohne Konto, ohne Cloud.
 
 Lektionen entstehen im Editor oder mit einem KI-Chat deiner Wahl (Plenum schreibt den Prompt,
-prüft und repariert die Antwort und zeigt vor dem Übernehmen einen Vergleich). Sollen Buchseiten,
-Arbeitsblätter oder Fotos einfließen, kreuzt man das im Dialog an: Der Prompt erklärt der KI, wie sie das
-Material nutzt (z. B. eigene Folie „Zuerst im Buch …“), die Dateien hängt man direkt im KI-Chat an.
+prüft und repariert die Antwort und zeigt vor dem Übernehmen einen Vergleich). Sollen eigene
+Arbeitsblätter oder Unterlagen einfließen, kreuzt man das im Dialog an: Der Prompt erklärt der KI, wie sie das
+Material nutzt (z. B. eigene Folie „Zuerst am Arbeitsblatt …“), die Dateien hängt man direkt im KI-Chat an.
 
 **Designs und Grafiken:** neun Präsentationsdesigns (`public/themes.css`, CSS-Variablen auf
 `#app[data-theme]`), wählbare Titelmotive und -aufbauten, und je Folie eine Grafik – aus der

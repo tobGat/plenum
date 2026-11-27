@@ -90,7 +90,7 @@ Plenum stellt von sich aus **keine Verbindung ins Internet** her. Ausnahmen:
   einen KI-Chat ihrer Wahl kopiert, und liest die eingefügte Antwort wieder ein. Plenum
   sendet dabei nichts; für den KI-Dienst gelten dessen eigene Bedingungen. Bitte keine
   personenbezogenen Daten von Schüler:innen in Prompts einfügen.
-- **Material für den KI-Chat** (z. B. Buchseiten oder Arbeitsblätter): Plenum erhält diese
+- **Material für den KI-Chat** (z. B. eigene Arbeitsblätter oder Unterlagen): Plenum erhält diese
   Dateien nicht. Die Lehrkraft gibt in Plenum nur an, dass sie Material anhängt, und hängt
   es im KI-Chat selbst an. Bitte nur Material verwenden, das an den KI-Dienst weitergegeben
   werden darf, und keine Fotos oder Namen von Schüler:innen.

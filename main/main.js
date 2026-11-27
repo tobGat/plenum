@@ -104,12 +104,15 @@ async function start() {
   // PDF-Export: Speicherort wählen, Druckseite /print in einem unsichtbaren Fenster zeichnen lassen und als PDF drucken
   let lastPdf = null;
   ipcMain.handle('exportPdf', async (e, o) => {
-    if (!e.senderFrame || !e.senderFrame.url.startsWith(base) || !o || !/^[\w-]{1,80}$/.test(String(o.lesson))) return { ok: false, error: 'Nicht erlaubt.' };
+    const isSeries = !!(o && o.series); // Themenserie: die Matrix als PDF oder Bild
+    if (!e.senderFrame || !e.senderFrame.url.startsWith(base) || !o || !/^[\w-]{1,80}$/.test(String(isSeries ? o.series : o.lesson))) return { ok: false, error: 'Nicht erlaubt.' };
     const name = String(o.name || 'Plenum').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || 'Plenum';
     const dir = lastPdf && fs.existsSync(path.dirname(lastPdf)) ? path.dirname(lastPdf) : app.getPath('documents');
-    const r = await dialog.showSaveDialog(BrowserWindow.fromWebContents(e.sender), { title: 'PDF speichern', defaultPath: path.join(dir, `${name}.pdf`), filters: [{ name: 'PDF', extensions: ['pdf'] }] });
+    const r = await dialog.showSaveDialog(BrowserWindow.fromWebContents(e.sender), { title: isSeries && !o.plan ? 'Bild speichern' : 'PDF speichern', defaultPath: path.join(dir, `${name}.${isSeries && !o.plan ? 'png' : 'pdf'}`), filters: isSeries && !o.plan ? [{ name: 'Bild (PNG)', extensions: ['png'] }] : [{ name: 'PDF', extensions: ['pdf'] }] });
     if (r.canceled || !r.filePath) return { ok: false, canceled: true };
-    const qs = new URLSearchParams({ lesson: String(o.lesson), variant: ['solution', 'results'].includes(o.variant) ? o.variant : 'blank', format: o.format === 'handout' ? 'handout' : 'slides' });
+    const asPng = isSeries && !o.plan; // die Matrix als Bild; das PDF einer Serie ist die Tabelle (plan)
+    if (asPng && !/\.png$/i.test(r.filePath)) r.filePath += '.png';
+    const qs = isSeries ? new URLSearchParams(o.plan ? { series: String(o.series), plan: '1' } : { series: String(o.series) }) : new URLSearchParams({ lesson: String(o.lesson), variant: ['solution', 'results'].includes(o.variant) ? o.variant : 'blank', format: o.format === 'handout' ? 'handout' : 'slides' });
     if (o.variant === 'results' && /^[\w-]{1,40}$/.test(String(o.state))) qs.set('state', String(o.state));
     if (o.notes) qs.set('notes', '1');
     if (o.light) qs.set('light', '1');
@@ -118,7 +121,12 @@ async function start() {
       await pw.loadURL(`${base}/print?${qs}`);
       const res = await Promise.race([pw.webContents.executeJavaScript('window.printReady', true), new Promise((resolve) => setTimeout(() => resolve({ ok: false, error: 'Das Zeichnen der Folien hat zu lange gedauert.' }), 180000))]);
       if (!res || !res.ok) return { ok: false, error: (res && res.error) || 'Die Folien konnten nicht gezeichnet werden.' };
-      const pdf = await pw.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true, margins: { marginType: 'none' } });
+      let pdf;
+      if (asPng) { // Fenster auf die Größe der Matrix bringen und abfotografieren
+        pw.setContentSize(Math.min(8000, Math.max(200, res.width || 1280)), Math.min(8000, Math.max(200, res.height || 720)));
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        pdf = (await pw.webContents.capturePage()).toPNG();
+      } else pdf = await pw.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true, margins: { marginType: 'none' } });
       try { await fs.promises.writeFile(r.filePath, pdf); } catch (err) {
         return { ok: false, error: err.code === 'EBUSY' || err.code === 'EPERM' ? 'Die Datei ist gerade in einem anderen Programm geöffnet. Bitte dort schließen oder einen anderen Namen wählen.' : `Die Datei konnte nicht gespeichert werden: ${err.message}` };
       }

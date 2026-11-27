@@ -1,5 +1,5 @@
 // Aufgaben mit Selbstkontrolle (mc, truefalse, sort) und Arbeitsauftrag (task)
-import { F, shuffled, fp, okInt } from './common.js';
+import { F, shuffled, fp, okInt, changedAny, changedSlot } from './common.js';
 
 export const mc = {
   type: 'mc', label: 'Multiple Choice', icon: 'vote', group: 'Aufgaben', selfCheck: true, live: true,
@@ -14,6 +14,7 @@ export const mc = {
     v.forEach((c) => { counts[c] = (counts[c] || 0) + 1; });
     return { counts, n: v.length, done: v.length, ok: v.filter((c) => c === ci).length, total: v.length };
   },
+  changes: changedAny,
   fingerprint: (s) => fp(s.options),
 };
 
@@ -45,6 +46,7 @@ export const truefalse = {
     }
     return { items, students, done, ok, total };
   },
+  changes: changedSlot,
   fingerprint: (s) => fp(s.items.map((i) => [i.text, i.correct])),
 };
 
@@ -78,6 +80,7 @@ export const sort = {
     }
     return { items, students, done, ok, total };
   },
+  changes: changedSlot,
   fingerprint: (s) => fp(s.categories),
 };
 

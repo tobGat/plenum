@@ -48,7 +48,28 @@ test('Lektionen anlegen, speichern, duplizieren, exportieren, löschen', async (
   assert.equal(put.lesson.title, 'Alle Typen (geändert)');
   const list = await (await api('/lessons')).json();
   assert.equal(list.length, 1);
+  // Farbe und Grafik der Karte: ungültige Werte fallen weg, das Änderungsdatum bleibt, Speichern und Duplizieren behalten sie
+  const card = await (await api(`/lessons/${lessonId}/card`, { method: 'PUT', body: JSON.stringify({ color: 'teal', graphic: 'lib:buch', x: 1 }) })).json();
+  assert.deepEqual(card.card, { color: 'teal', graphic: 'lib:buch', imgv: '', pos: null });
+  const meta = (await (await api('/lessons')).json())[0];
+  assert.deepEqual(meta.card, { color: 'teal', graphic: 'lib:buch', imgv: '', pos: null }); assert.equal(meta.updatedAt, put.lesson.updatedAt);
+  assert.deepEqual((await (await api(`/lessons/${lessonId}`)).json()).card, { color: 'teal', graphic: 'lib:buch' });
+  assert.deepEqual((await (await api(`/lessons/${lessonId}/card`, { method: 'PUT', body: JSON.stringify({ color: 'pink', graphic: 'media:x' }) })).json()).card, null);
+  // eigenes Bild: Liste ohne Bilddaten, Auslieferung über /cardimage, Farbe ändern behält das Bild, eine Grafik ersetzt es
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const withImg = await (await api(`/lessons/${lessonId}/card`, { method: 'PUT', body: JSON.stringify({ color: 'blue', image: { mime: 'image/png', data: png, w: 1, h: 1 }, pos: { x: 80, y: 50 } }) })).json();
+  assert.ok(withImg.card.imgv); assert.deepEqual(withImg.card.pos, { x: 80, y: 50 }); assert.ok(!JSON.stringify(withImg).includes(png));
+  assert.ok(!JSON.stringify(await (await api('/lessons')).json()).includes(png));
+  const im = await api(`/lessons/${lessonId}/cardimage`);
+  assert.equal(im.headers.get('content-type'), 'image/png');
+  assert.equal((await fetch(`${base}/api/host/lessons/${lessonId}/cardimage`)).status, 403);
+  assert.equal((await (await api(`/lessons/${lessonId}/card`, { method: 'PUT', body: JSON.stringify({ color: 'rose', pos: { x: 80, y: 50 } }) })).json()).card.imgv, withImg.card.imgv, 'Farbe ändern behält das Bild');
+  assert.equal((await (await api(`/lessons/${lessonId}`)).json()).card.image.data, png, 'das Bild steht in der Lektionsdatei');
+  await api(`/lessons/${lessonId}/card`, { method: 'PUT', body: JSON.stringify({ graphic: 'icon:leaf' }) });
+  assert.equal((await api(`/lessons/${lessonId}/cardimage`)).status, 404, 'eine Grafik ersetzt das Bild');
+  assert.equal((await api('/lessons/gibt-es-nicht/card', { method: 'PUT', body: '{}' })).status, 404);
   const dup = await (await api(`/lessons/${lessonId}/duplicate`, { method: 'POST' })).json();
+  assert.deepEqual(dup.card, { graphic: 'icon:leaf' });
   assert.notEqual(dup.id, lessonId); assert.notEqual(dup.slides[0].id, r.slides[0].id);
   const ex = await api(`/lessons/${lessonId}/export`); assert.match(ex.headers.get('content-disposition'), /\.plenum/);
   assert.equal((await (await api(`/lessons/${dup.id}`, { method: 'DELETE' })).json()).ok, true);
@@ -184,6 +205,50 @@ test('Anwesenheit: Lehrkraft erfährt nur die Anzahl der Geräte, die Plenum ver
   assert.equal((await emit(host, 'host:state')).away, 0);
 });
 
+test('Sperre gegen ständiges Umstimmen: zwei Änderungen je Aufgabe, dann bleibt die letzte Antwort', async () => {
+  const p = await goto('poll');
+  const { s: so } = await student('flipAAAxyz');
+  const vote = (i) => emit(so, 'submit', { slideId: p.id, data: { choices: [i] } });
+  let r = await vote(0);
+  assert.deepEqual(r.lock, { left: 2, max: 2, locked: false });
+  assert.equal((await vote(0)).lock.left, 2, 'dieselbe Antwort zählt nicht als Änderung');
+  assert.equal((await vote(1)).lock.left, 1);
+  const ev = once(host, 'locked');
+  r = await vote(0);
+  assert.equal(r.ok, true); assert.equal(r.lock.locked, true);
+  assert.deepEqual(await ev, { slideId: p.id, n: 1 });
+  const back = once(so, 'slide');
+  r = await vote(1);
+  assert.equal(r.ok, false); assert.equal(r.locked, true);
+  const pay = await back;
+  assert.deepEqual(pay.data.mine, [0], 'die gezählte Antwort bleibt'); assert.equal(pay.lock.locked, true);
+  let st = await emit(host, 'host:state');
+  assert.equal(st.locked, 1); assert.ok(!JSON.stringify(st.locked).includes('flipAAAxyz'));
+  // Skala: weitere Aussagen ausfüllen zählt nicht, Überschreiben schon; nächste Aufgabe ist wieder frei
+  const sc = await goto('scale');
+  assert.equal((await emit(host, 'host:state')).locked, 0);
+  const rate = (values) => emit(so, 'submit', { slideId: sc.id, data: { values } });
+  const n = sc.statements.length, vals = (a, b) => [a, b, ...Array(n - 2).fill(null)];
+  assert.equal((await rate(vals(1, null))).lock.left, 2);
+  assert.equal((await rate(vals(1, 2))).lock.left, 2);
+  assert.equal((await rate(vals(2, 2))).lock.left, 1);
+  assert.equal((await rate(vals(3, 2))).lock.locked, true);
+  assert.equal((await rate(vals(1, 2))).ok, false);
+  // Zurücksetzen hebt die Sperre auf
+  await goto('poll');
+  host.emit('host:reset', p.id); await wait(80);
+  assert.deepEqual((await vote(1)).lock, { left: 2, max: 2, locked: false });
+  // Einstellung: keine Änderung erlaubt bzw. unbegrenzt
+  assert.equal((await (await api('/settings', { method: 'PUT', body: JSON.stringify({ maxChanges: 0 }) })).json()).maxChanges, 0);
+  assert.equal((await vote(0)).ok, false);
+  assert.equal((await (await api('/settings', { method: 'PUT', body: JSON.stringify({ maxChanges: 7 }) })).json()).maxChanges, 0, 'ungültiger Wert wird ignoriert');
+  await api('/settings', { method: 'PUT', body: JSON.stringify({ maxChanges: -1 }) });
+  for (const i of [0, 1, 0, 1, 0]) { r = await vote(i); assert.equal(r.ok, true); assert.equal(r.lock, null); }
+  await api('/settings', { method: 'PUT', body: JSON.stringify({ maxChanges: 2 }) });
+  host.emit('host:reset', p.id); await wait(80);
+  so.disconnect();
+});
+
 test('Stände: speichern, laden, geänderte Folien erkennen', async () => {
   const mcSlide = L.slides.find((x) => x.type === 'mc');
   const r = await emit(host, 'host:saveAs', 'Klasse 4a');
@@ -254,6 +319,46 @@ test('Stände löschen: einzeln und alle, nicht während der Präsentation', asy
   list = await (await api(`/states/${lessonId}/_all`, { method: 'DELETE' })).json();
   assert.deepEqual(list, []);
   assert.equal((await (await api('/lessons')).json()).find((x) => x.id === lessonId).lastState, null);
+});
+
+test('Themenserien: anlegen, speichern, duplizieren, exportieren, importieren, löschen', async () => {
+  assert.equal((await fetch(`${base}/api/host/series`)).status, 403);
+  const lessons = await (await api('/lessons')).json();
+  const lid = lessons[0].id;
+  let S = await (await api('/series', { method: 'POST', body: '{}' })).json();
+  assert.equal(S.format, 'plenum-serie'); assert.equal(S.cards.length, 0);
+  S.title = 'Wasser-Reihe';
+  S.cards = [{ id: 'k1', col: 0, row: 0, lesson: lid, title: lessons[0].title }, { id: 'k2', col: 1, row: 0, title: 'Schularbeit', color: 'rose' }, { id: 'k3', col: 1, row: 0, title: 'belegt' }];
+  S.links = [{ from: 'k1', to: 'k2' }, { from: 'k2', to: 'k1' }];
+  S = await (await api(`/series/${S.id}`, { method: 'PUT', body: JSON.stringify(S) })).json();
+  assert.equal(S.cards.length, 2); assert.equal(S.links.length, 1);
+  assert.equal((await api('/series/falsch', { method: 'PUT', body: JSON.stringify(S) })).status, 400);
+  const list = await (await api('/series')).json();
+  assert.equal(list.length, 1); assert.equal(list[0].title, 'Wasser-Reihe'); assert.equal(list[0].cards.length, 2);
+  assert.equal(fs.readdirSync(path.join(dir, 'lektionen')).filter((f) => f.endsWith('.plenumserie')).length, 1);
+  const dup = await (await api(`/series/${S.id}/duplicate`, { method: 'POST' })).json();
+  assert.notEqual(dup.id, S.id); assert.equal(dup.cards[0].lesson, lid); assert.equal(dup.links.length, 1);
+  // Export enthält die Lektion; Import legt sie als Kopie an und schreibt den Verweis um
+  const ex = await api(`/series/${S.id}/export`);
+  assert.match(ex.headers.get('content-disposition'), /.plenumserie/);
+  const file = await ex.text();
+  assert.equal(JSON.parse(file).lessons.length, 1);
+  const parsed = await (await api('/import/parse', { method: 'POST', body: JSON.stringify({ text: file }) })).json();
+  assert.equal(parsed.single, true); assert.equal(parsed.series.length, 1); assert.equal(parsed.bundle.length, 1);
+  const before = (await (await api('/lessons')).json()).length;
+  const done = await (await api('/import/commit', { method: 'POST', body: JSON.stringify({ lessons: parsed.bundle.map((x) => x.lesson), series: parsed.series }) })).json();
+  assert.equal(done.series.length, 1); assert.notEqual(done.series[0].id, S.id);
+  const after = await (await api('/lessons')).json();
+  assert.equal(after.length, before + 1);
+  assert.notEqual(done.series[0].cards[0].lesson, lid);
+  assert.ok(after.some((l) => l.id === done.series[0].cards[0].lesson));
+  // Sicherung enthält die Serien
+  const backup = await (await api('/backup')).json();
+  assert.equal(backup.series.length, 3);
+  for (const x of [dup, done.series[0]]) assert.equal((await (await api(`/series/${x.id}`, { method: 'DELETE' })).json()).ok, true);
+  await api(`/lessons/${done.series[0].cards[0].lesson}`, { method: 'DELETE' });
+  assert.equal((await api(`/series/${dup.id}`)).status, 404);
+  assert.equal((await (await api('/series')).json()).length, 1);
 });
 
 test('Port belegt → nächster Port im Bereich', async () => {

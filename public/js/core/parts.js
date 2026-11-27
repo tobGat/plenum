@@ -56,6 +56,9 @@ export function withGraphic(head, body, g, mediaUrl) {
 // Hinweis für die Lehrkraft: so viele Geräte haben Plenum gerade nicht im Vordergrund (anonym, nur die Anzahl)
 export const awayBadge = (n) => (n > 0 ? html`<span class="awaybadge" title="${n === 1 ? 'Ein Gerät hat' : `${n} Geräte haben`} Plenum gerade nicht im Vordergrund (anderer Tab oder anderes Programm). Anonym – Plenum weiß nicht, wer es ist.">${ic('eyeoff')}<b>${n}</b> nicht in Plenum</span>` : '');
 
+// Sperre gegen ständiges Umstimmen: so viele Geräte haben ihre Änderungen bei dieser Aufgabe aufgebraucht (anonym)
+export const lockBadge = (n) => (n > 0 ? html`<span class="awaybadge lockbadge" title="${n === 1 ? 'Ein Gerät hat seine Antwort' : `${n} Geräte haben ihre Antwort`} bei dieser Aufgabe so oft geändert, dass sie jetzt fixiert ist (die letzte Antwort zählt). Anonym – Plenum weiß nicht, wer es ist. Die Grenze steht in den Einstellungen.">${ic('lock')}<b>${n}</b> fixiert</span>` : '');
+
 export function shead(title, section) {
   return html`<div class="shead"><div class="kicker"><span class="kic">${ic(section.icon)}</span>${section.name}</div><h2>${title}</h2></div>`;
 }

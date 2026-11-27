@@ -5,6 +5,7 @@ import { buildPrompt, buildRevisePrompt, templateJson, exampleLesson, DEFAULT_TY
 import { videoInfo, parseTime } from '../shared/types/content.js';
 import { normalizeLesson } from '../shared/schema.js';
 import { TYPE_LIST } from '../shared/types/index.js';
+import { scaleBefore } from '../shared/types/live.js';
 import { parseLessonText } from '../server/aiimport.js';
 
 test('Prompt: Thema, Umfang, Regeln und nur gewählte Typen', () => {
@@ -31,20 +32,20 @@ test('Umfang: genau, von–bis oder offen', () => {
   assert.match(templateJson({ ...base, countMode: 'range', countMin: 6, countMax: 9 })._anleitung, /mindestens 6 und höchstens 9 Folien/);
 });
 
-test('Material: Hinweis im Prompt, Buch-Aufträge als eigene Folie, Thema optional', () => {
-  const material = { desc: 'Buch S. 40–42, Ü2–Ü4' };
+test('Material: Hinweis im Prompt, Aufträge zum Material als eigene Folie, Thema optional', () => {
+  const material = { desc: 'Arbeitsblatt Brüche, Aufgaben 2–4' };
   const p = buildPrompt({ topic: '', count: 8, types: ['mc', 'poll'], material });
   assert.match(p, /THEMA: siehe angehängtes Material/);
-  assert.match(p, /Ich hänge dir in diesem Chat Material an \(Fotos, Scans, Screenshots oder PDF\): Buch S\. 40–42, Ü2–Ü4/);
-  assert.match(p, /„Zuerst im Buch: Ü2 und Ü3“/);
-  assert.match(p, /"task" – Arbeitsauftrag/, 'Arbeitsauftrag wird für Buch-Material ergänzt');
+  assert.match(p, /Ich hänge dir in diesem Chat Material an \(Fotos, Scans, Screenshots oder PDF\): Arbeitsblatt Brüche, Aufgaben 2–4/);
+  assert.match(p, /„Zuerst am Arbeitsblatt: Aufgabe 2 und 3“/);
+  assert.match(p, /"task" – Arbeitsauftrag/, 'Arbeitsauftrag wird für Material ergänzt');
   assert.match(p, /„Bitte die Dateien anhängen\.“/);
   assert.match(buildPrompt({ topic: 'X', material: { desc: '' } }), /Material an \(Fotos, Scans, Screenshots oder PDF\)\.\n/);
   const o = buildPrompt({ topic: 'X', types: ['mc'], material, materialUse: 'orient' });
-  assert.match(o, /verweise nicht auf Buchseiten/);
+  assert.match(o, /verweise nicht auf das Material/);
   assert.doesNotMatch(o, /"task" – /);
   assert.doesNotMatch(buildPrompt({ topic: 'X' }), /MATERIAL:/, 'ohne Material kein Abschnitt');
-  assert.match(templateJson({ types: ['mc'], count: 5, material })._anleitung, /weiteren angehängten Dateien \(Buch S\. 40–42, Ü2–Ü4\)/);
+  assert.match(templateJson({ types: ['mc'], count: 5, material })._anleitung, /weiteren angehängten Dateien \(Arbeitsblatt Brüche, Aufgaben 2–4\)/);
 });
 
 test('Videos: Links aus dem Formular, eigener Abschnitt im Prompt, Video-Folie nur mit vorgegebenen Links', () => {
@@ -134,4 +135,13 @@ test('Import: gerade Anführungszeichen und Zeilenumbrüche mitten im Text werde
   // nicht reparierbar: Meldung zeigt die Stelle
   const bad = parseLessonText('{"title":"T","slides":[{"type":"info","title":"A" "cards":[]}]}');
   assert.equal(bad.lesson, null); assert.match(bad.errors[0], /Stelle \(Zeile 1\): .*"title":"A" "cards"/);
+});
+
+test('Skala vorher/nachher: frühere Folie mit gleichen Aussagen und gleicher Stufenzahl', () => {
+  const sc = (id, statements, steps = 5) => ({ id, type: 'scale', statements, steps });
+  const L = { slides: [sc('a', ['Ich kann X.', 'Ich kenne Y.']), { id: 't', type: 'info' }, sc('b', ['Anderes']), sc('c', ['ich  kann x.', 'Neu', 'Ich kenne Y.']), sc('d', ['Ich kann X.'], 4)] };
+  assert.deepEqual(scaleBefore(L, L.slides[3]), { slideId: 'a', index: 0, map: [0, -1, 1] });
+  assert.equal(scaleBefore(L, L.slides[0]), null, 'die erste Skala hat keinen Vergleich');
+  assert.equal(scaleBefore(L, L.slides[2]), null, 'andere Aussagen');
+  assert.equal(scaleBefore(L, L.slides[4]), null, 'andere Stufenzahl');
 });

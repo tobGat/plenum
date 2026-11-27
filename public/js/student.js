@@ -24,16 +24,24 @@ const $ = (id) => document.getElementById(id), content = $('content');
 initOverlay();
 autoFit(content);
 
-const socket = io({ transports: ['websocket', 'polling'] });
+const socket = io({ transports: ['websocket', 'polling'], reconnectionDelay: 500, reconnectionDelayMax: 3000, timeout: 8000 });
 let P = null, outline = [], nick = '', freeNicks = false, joined = false, lastId = null, hostIndex = 0, waitTimer = null;
 const local = {};
 const loader = raw('<div class="loader"><i></i><i></i><i></i><i></i></div>');
 
-function waiting(title, text) { overlay(html`${loader}<h2>${title}</h2><p class="ov-sub">${text}</p>`, { closable: false }); }
+let waitShown = false; // ein Warte- oder Verbindungshinweis steht gerade da
+function waiting(title, text) { waitShown = true; overlay(html`${loader}<h2>${title}</h2><p class="ov-sub">${text}</p>`, { closable: false }); }
 
+// Beitreten (auch erneut, z. B. nach einer Pause): Die Antwort des Servers bringt die aktuelle Folie und schließt Hinweise.
+// Bleibt sie aus, hängt die Verbindung (Gerät war im Ruhezustand, WLAN gewechselt) → neu aufbauen statt warten.
+let joinSeq = 0;
 function join() {
   clearTimeout(waitTimer);
-  socket.emit('join', { cid: cid(), proto: PROTO }, (r) => {
+  if (!socket.connected) { socket.connect(); return; } // „connect“ ruft join erneut auf
+  const seq = ++joinSeq;
+  socket.timeout(6000).emit('join', { cid: cid(), proto: PROTO }, (err, r) => {
+    if (seq !== joinSeq) return; // von einem neueren Versuch überholt
+    if (err) { reconnect(); return; }
     r = r || {};
     if (r.reload) { location.reload(); return; }
     if (!r.ok) {
@@ -43,10 +51,12 @@ function join() {
       waitTimer = setTimeout(join, 4000);
       return;
     }
+    // Erneutes Beitreten ohne Änderung (z. B. beim Zurückkehren zur Seite): nichts neu zeichnen, damit Getipptes und offene Dialoge bleiben
+    const same = joined && !waitShown && P && JSON.stringify(P) === JSON.stringify(r.slide);
     joined = true; outline = r.outline || []; nick = r.nick || ''; freeNicks = !!r.freeNicks;
     $('hchap').textContent = r.title || 'Plenum';
-    closeOv();
-    show(r.slide);
+    if (waitShown) { waitShown = false; closeOv(); }
+    if (!same) show(r.slide);
     awaySent = false; checkAway();
   });
 }
@@ -71,7 +81,8 @@ function show(p) {
   P = p; hostIndex = p.hostIndex;
   const L = local[p.id] || (local[p.id] = {});
   // Lehrkraft hat zurückgesetzt oder das Quiz neu gestartet → eigene Eingaben verwerfen
-  if (prevSame && ((p.data.mine == null && L._sub) || (p.type === 'quiz' && (p.data.phase === 'ready' || p.data.phase === 'idle')))) for (const k in L) delete L[k];
+  // … oder die Antwort ist fixiert (zu oft geändert) → die gezählte Antwort vom Server zeigen
+  if (prevSame && ((p.data.mine == null && L._sub) || (p.lock && p.lock.locked) || (p.type === 'quiz' && (p.data.phase === 'ready' || p.data.phase === 'idle')))) for (const k in L) delete L[k];
   render(p.id !== lastId);
 }
 
@@ -88,6 +99,9 @@ function render(fresh) {
   const sec = { ...col, name: p.section.name, icon: p.section.icon };
   let body;
   try { body = p.hidden ? lookUp() : R.student ? R.student(p.data, ctx()) : html`<div class="card">${p.data.title}</div>`; } catch (e) { console.error(e); body = html`<div class="warn">${ic('alert')}<span>Diese Folie konnte nicht angezeigt werden.</span></div>`; }
+  const locked = !p.hidden && !!(p.lock && p.lock.locked);
+  if (locked) body = html`${body}<div class="locknote anim" role="status">${ic('lock')}<span>${p.lock.max > 0 ? html`<b>Deine Antwort ist jetzt fixiert.</b> Du hast sie schon ${{ 1: 'einmal', 2: 'zweimal', 3: 'dreimal', 5: 'fünfmal' }[p.lock.max] || `${p.lock.max}-mal`} geändert. Bei der nächsten Aufgabe kannst du wieder mitmachen.` : html`<b>Deine Antwort ist gespeichert.</b> Sie lässt sich bei dieser Aufgabe nicht mehr ändern.`}</span></div>`;
+  content.classList.toggle('locked', locked);
   content.classList.toggle('enter', !!fresh);
   content.innerHTML = String(withGraphic(p.type === 'title' || p.hidden ? '' : shead(p.data.title, sec), body, p.type === 'title' ? null : p.graphic));
   if (fresh) { lastId = p.id; content.scrollTop = 0; }
@@ -103,12 +117,20 @@ function renderRoom() {
 
 function ctx() {
   const p = P;
-  return { p, sec: { ...themeCols(colorOf(p.section.color), p.theme), name: p.section.name, icon: p.section.icon }, local: local[p.id], key: 'c', next: outline[p.index + 1],
+  return { p, canChange: !p.lock || p.lock.left > 0, sec: { ...themeCols(colorOf(p.section.color), p.theme), name: p.section.name, icon: p.section.icon }, local: local[p.id], key: 'c', next: outline[p.index + 1],
     render: () => { content.classList.remove('enter'); render(false); },
     submit: (data) => new Promise((resolve) => {
       local[p.id]._sub = true;
       socket.timeout(5000).emit('submit', { slideId: p.id, data }, (err, r) => {
-        if (err || !r || !r.ok) toast(err ? 'Keine Verbindung – bitte nochmal versuchen.' : 'Das hat nicht geklappt. Ist die Frage noch offen?', 'err');
+        if (!err && r && r.locked) toast('Deine Antwort ist fixiert – sie lässt sich bei dieser Aufgabe nicht mehr ändern.');
+        else if (err || !r || !r.ok) toast(err ? 'Keine Verbindung – bitte nochmal versuchen.' : 'Das hat nicht geklappt. Ist die Frage noch offen?', 'err');
+        // Sperre gegen ständiges Umstimmen: verbleibende Änderungen merken und ansagen
+        if (!err && r && r.ok && r.lock && P && P.id === p.id) {
+          const before = P.lock ? P.lock.left : r.lock.max;
+          P.lock = r.lock;
+          if (r.lock.locked) { for (const k in local[p.id]) delete local[p.id][k]; if (r.mine !== undefined) P.data.mine = r.mine; content.classList.remove('enter'); render(false); }
+          else if (r.lock.left < before) { toast(r.lock.left === 1 ? 'Du kannst deine Antwort noch einmal ändern.' : `Du kannst deine Antwort noch ${r.lock.left}-mal ändern.`); content.classList.remove('enter'); render(false); }
+        }
         resolve(err ? { ok: false } : r);
       });
     }) };
@@ -138,4 +160,30 @@ socket.on('hostSlide', (i) => { hostIndex = i; renderRoom(); });
 socket.on('nick', (n) => { nick = n; renderRoom(); });
 socket.on('nickRules', (d) => { freeNicks = !!d.freeNicks; renderRoom(); });
 socket.on('stopped', () => { joined = false; waiting('Die Präsentation ist beendet', 'Sobald die Lehrkraft wieder startet, verbindet sich diese Seite automatisch.'); });
-socket.on('disconnect', () => { if (joined) waiting('Verbindung unterbrochen', 'Die Seite verbindet sich automatisch wieder, sobald die Präsentation erreichbar ist.'); });
+socket.on('disconnect', (reason) => {
+  if (joined) waiting('Verbindung unterbrochen', 'Die Seite verbindet sich automatisch wieder, sobald die Präsentation erreichbar ist.');
+  if (reason === 'io server disconnect') socket.connect(); // vom Server getrennt: socket.io verbindet dann nicht von selbst neu
+});
+
+// ---------- Verbindung nach Pausen wiederfinden ----------
+// Nach Ruhezustand, gesperrtem Bildschirm oder WLAN-Wechsel hält der Browser die alte Verbindung oft noch für offen,
+// obwohl sie tot ist, oder er wartet lange bis zum nächsten Versuch. Deshalb: Verbindung hart neu aufbauen, wenn der
+// Server nicht antwortet, und bei jeder Rückkehr zur Seite (sichtbar, Fokus, wieder online) sofort prüfen.
+let lastCheck = 0;
+function reconnect() { joinSeq++; socket.disconnect(); socket.connect(); }
+function checkConnection() {
+  if (document.hidden || Date.now() - lastCheck < 1500) return;
+  lastCheck = Date.now();
+  if (!socket.connected) { socket.io.reconnectionAttempts(Infinity); if (socket.io.backoff) socket.io.backoff.reset(); reconnect(); } else join();
+}
+document.addEventListener('visibilitychange', checkConnection);
+['pageshow', 'focus', 'online'].forEach((ev) => window.addEventListener(ev, checkConnection));
+// Wächter: steht ein Verbindungshinweis länger da oder kam lange nichts vom Server, erneut beitreten
+let lastSeen = Date.now();
+socket.onAny(() => { lastSeen = Date.now(); });
+socket.io.on('ping', () => { lastSeen = Date.now(); });
+setInterval(() => {
+  if (document.hidden) return;
+  if (!socket.connected) { if (!socket.active || Date.now() - lastCheck > 20000) checkConnection(); return; }
+  if (Date.now() - lastSeen > 60000) { lastSeen = Date.now(); join(); } // Server meldet sich sonst alle 25 s
+}, 5000);

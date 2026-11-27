@@ -36,8 +36,8 @@ function videoBlock(videos, mode = 'create') {
     ].map((r, i) => `${i + 1}. ${r}`)].join('\n');
 }
 
-// Material (Buchseiten, Arbeitsblätter, Fotos …) hängt die Lehrkraft im KI-Chat selbst an; Plenum beschreibt nur, wie es zu nutzen ist.
-// material: null/false = keines, sonst { desc: 'Buch S. 40–42, Ü2–Ü4' } (Beschreibung optional)
+// Eigenes Material (Arbeitsblätter, Unterlagen, Fotos …) hängt die Lehrkraft im KI-Chat selbst an; Plenum beschreibt nur, wie es zu nutzen ist.
+// material: null/false = keines, sonst { desc: 'Arbeitsblatt „Brüche“, Aufgaben 2–4' } (Beschreibung optional)
 export const NO_FILES_REPLY = 'Bitte die Dateien anhängen.';
 
 function materialBlock(material, use = 'buch', mode = 'create') {
@@ -45,13 +45,13 @@ function materialBlock(material, use = 'buch', mode = 'create') {
   const desc = String(material.desc || '').trim();
   const look = 'Sieh dir alle angehängten Dateien genau an (auch Bildunterschriften, Tabellen und Diagramme).';
   const own = 'Übernimm keine längeren Texte wörtlich, sondern fasse in eigenen Worten zusammen. Kurze Zitate von Aufgabenstellungen sind in Ordnung.';
-  const nums = 'Zahlen aus abgebildeten Diagrammen oder Tabellen nur übernehmen, wenn sie eindeutig lesbar sind – mit Quelle, z. B. "Schulbuch, S. 44". Sonst keine Zahlen erfinden.';
-  const tasks = 'Aufgaben, die im Buch oder auf dem Arbeitsblatt erledigt werden, bekommen eine eigene Folie vom Typ "task" mit Seite, Aufgabennummer, Sozialform und kurzem Auftrag (z. B. „Zuerst im Buch: Ü2 und Ü3“). Setze sie direkt vor die Folien, die darauf aufbauen; baut eine Aufgabe auf früheren auf, nenne diese mit.';
+  const nums = 'Zahlen aus abgebildeten Diagrammen oder Tabellen nur übernehmen, wenn sie eindeutig lesbar sind – mit Quelle, z. B. "Arbeitsblatt, S. 2". Sonst keine Zahlen erfinden.';
+  const tasks = 'Aufgaben, die auf dem Arbeitsblatt oder im Material erledigt werden, bekommen eine eigene Folie vom Typ "task" mit Seite, Aufgabennummer, Sozialform und kurzem Auftrag (z. B. „Zuerst am Arbeitsblatt: Aufgabe 2 und 3“). Setze sie direkt vor die Folien, die darauf aufbauen; baut eine Aufgabe auf früheren auf, nenne diese mit.';
   const none = `Siehst du keine angehängten Dateien, antworte nur mit dem Satz „${NO_FILES_REPLY}“ und erstelle noch keine Lektion.`;
   const rules = mode === 'revise'
     ? [look, 'Nutze das Material für das, was der Änderungswunsch verlangt.', tasks, own, nums, none]
     : use === 'orient'
-      ? [`${look} Übernimm daraus Thema, Fachbegriffe, Niveau und typische Beispiele.`, 'Erstelle eigene Erklärungen und Aufgaben: Die Stunde soll ohne das Material funktionieren, verweise nicht auf Buchseiten.', own, nums, none]
+      ? [`${look} Übernimm daraus Thema, Fachbegriffe, Niveau und typische Beispiele.`, 'Erstelle eigene Erklärungen und Aufgaben: Die Stunde soll ohne das Material funktionieren, verweise nicht auf das Material.', own, nums, none]
       : [`${look} Thema, Fachbegriffe, Beispiele, Reihenfolge und Schwierigkeitsgrad der Stunde richten sich danach.`, tasks,
         'Ergänze passende interaktive Folien zum Material: Verständnisfragen (mc, truefalse), Zuordnungen, Lückentexte, Umfragen zum Thema und ein kurzes Quiz.', own, nums, none];
   return ['MATERIAL:', `Ich hänge dir in diesem Chat Material an (Fotos, Scans, Screenshots oder PDF)${desc ? `: ${desc}` : '.'}`, '', 'So nutzt du das Material:', ...rules.map((r, i) => `${i + 1}. ${r}`)].join('\n');
@@ -132,7 +132,7 @@ function formatBlock(list) {
 const withVideo = (types, vids) => { const base = (types && types.length ? types : DEFAULT_TYPES).filter((t) => t !== 'video'); return vids.length ? [...base, 'video'] : base; };
 export function buildPrompt({ topic = '', subject = '', grade = '', count = 12, countMode = 'exact', countMin, countMax, types = [], notes = '', material = null, materialUse = 'buch', videos = [] } = {}) {
   const vids = cleanVideos(videos);
-  // Mit Buch-/Arbeitsblatt-Material braucht es Arbeitsaufträge („Zuerst im Buch …“)
+  // Mit Arbeitsblatt-Material braucht es Arbeitsaufträge („Zuerst am Arbeitsblatt …“)
   const list = pickTypes(withVideo(material && materialUse !== 'orient' && types.length && !types.includes('task') ? [...types, 'task'] : types, vids)), scope = scopeOf({ count, countMode, countMin, countMax });
   const ex = exampleLesson(list, vids);
   return [
@@ -193,7 +193,7 @@ export function templateJson({ types = [], count = 12, countMode = 'exact', coun
   const vids = cleanVideos(videos), ex = exampleLesson(withVideo(types, vids), vids);
   return {
     _anleitung: `Fülle diese Vorlage für eine Plenum-Unterrichtsstunde${topic ? ` zum Thema „${topic}“` : ''} aus – Umfang: ${scopeOf({ count, countMode, countMin, countMax }).short}. ` +
-      (material ? `Richte dich nach den weiteren angehängten Dateien${material.desc ? ` (${String(material.desc).trim()})` : ''}; Aufgaben aus dem Buch bekommen eine eigene Folie vom Typ "task". ` : '') +
+      (material ? `Richte dich nach den weiteren angehängten Dateien${material.desc ? ` (${String(material.desc).trim()})` : ''}; Aufgaben aus dem Material bekommen eine eigene Folie vom Typ "task". ` : '') +
       (vids.length ? `Baue ${vids.length === 1 ? 'dieses Video' : 'diese Videos'} als Folie vom Typ "video" ein (Adresse unverändert): ${vids.map((v) => v.url).join(', ')}. ` : '') +
       'Ersetze die Musterfolien durch eigene, verwende nur die vorkommenden Folientypen, halte das Format exakt ein und antworte mit einem einzigen JSON-Codeblock. ' +
       'Erfinde keine Zahlen oder Quellen – sonst als Quelle "Beispieldaten (fiktiv)". Anführungszeichen in Texten nur als „…“. Das Feld "_anleitung" weglassen.',

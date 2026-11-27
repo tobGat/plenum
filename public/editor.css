@@ -222,7 +222,7 @@ body.preview{overflow:hidden}
 .th-playful{background:linear-gradient(135deg,#fde68a,#bae6fd 55%,#fbcfe8)}.th-playful i{background:linear-gradient(90deg,#4f46e5,#a855f7)}.th-playful u{background:#e11d48;border-radius:999px}.th-playful s{background:#fff;border-radius:8px;border:2px solid #1e293b;box-shadow:2px 3px 0 #c7d2fe}
 .th-contrast{background:#fff;border:2px solid #000}.th-contrast i{background:#000}.th-contrast u{background:#000}.th-contrast s{background:#fff;border:2px solid #000}
 
-/* Material für die KI (Buchseiten, Arbeitsblätter …) */
+/* Material für die KI (eigene Arbeitsblätter, Unterlagen …) */
 .aiform.one{grid-template-columns:1fr;margin-top:12px}
 .matsec{gap:8px}
 .matsec>small{line-height:1.45}

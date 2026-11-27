@@ -67,6 +67,21 @@ export function normGraphic(g, media, r, p) {
   if (cap) out.caption = cap;
   return out;
 }
+// Aussehen der Karte in der Bibliothek: Farbe und entweder eine Grafik (Illustration oder Symbol) oder ein eigenes kleines Bild
+// (eingebettet, mit Ausschnitt pos in Prozent). null = automatisch, ohne Grafik.
+export const CARD_IMAGE_MAX = 400_000; // Base64-Zeichen
+export function normCard(c) {
+  if (!isObj(c)) return null;
+  const out = {};
+  if (COLOR_NAMES.includes(c.color)) out.color = c.color;
+  const g = str(c.graphic), k = g.indexOf(':'), kind = g.slice(0, k), name = g.slice(k + 1), m = c.image;
+  if (isObj(m) && ['image/webp', 'image/jpeg', 'image/png'].includes(m.mime) && typeof m.data === 'string' && m.data.length > 0 && m.data.length <= CARD_IMAGE_MAX && /^[A-Za-z0-9+/]+=*$/.test(m.data)) {
+    out.image = { mime: m.mime, data: m.data, w: Math.max(0, Math.round(+m.w || 0)), h: Math.max(0, Math.round(+m.h || 0)) };
+    const pc = (v) => (Number.isFinite(+v) ? Math.max(0, Math.min(100, Math.round(+v))) : 50);
+    if (isObj(c.pos) && (pc(c.pos.x) !== 50 || pc(c.pos.y) !== 50)) out.pos = { x: pc(c.pos.x), y: pc(c.pos.y) };
+  } else if ((kind === 'lib' && LIBRARY_NAMES.includes(name)) || (kind === 'icon' && ICON_NAMES.includes(name))) out.graphic = g;
+  return Object.keys(out).length ? out : null;
+}
 const COMMON_KEYS = ['id', 'type', 'section'];
 const okId = (v) => typeof v === 'string' && /^[\w-]{1,40}$/.test(v);
 
@@ -94,6 +109,8 @@ export function normalizeLesson(input, opts = {}) {
   const now = new Date().toISOString();
   const lesson = { format: FORMAT, version: VERSION, id: okId(L.id) ? L.id : newId('L'), createdAt: str(L.createdAt) || now, updatedAt: str(L.updatedAt) || now, appVersion: str(opts.appVersion || L.appVersion) };
   Object.assign(lesson, normObject(L, LESSON_FIELDS, r, 'Lektion'));
+  const card = normCard(L.card);
+  if (card) lesson.card = card;
 
   // Abschnitte; auch Folien, die eine KI in Abschnitten verschachtelt hat
   let rawSlides = asArr(L.slides ?? L.folien);

@@ -1,7 +1,7 @@
 {
   "name": "plenum",
   "productName": "Plenum",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Interaktiv durch den Unterricht: Folien, Aufgaben, Umfragen, Wortwolken und Quiz – die Klasse macht im lokalen Netz mit.",
   "author": "Tobias Gatterbauer",
   "license": "GPL-3.0-or-later",
@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node main/launch.cjs",
     "test": "node --test \"test/*.test.js\"",
-    "test:ui": "node main/launch.cjs test/ui/run.mjs && node main/launch.cjs test/ui/editor.mjs && node main/launch.cjs test/ui/ai.mjs && node main/launch.cjs test/ui/library.mjs && node main/launch.cjs test/ui/states.mjs && node main/launch.cjs test/ui/overlay.mjs && node main/launch.cjs test/ui/gap.mjs && node main/launch.cjs test/ui/video.mjs && node main/launch.cjs test/ui/pdf.mjs && node main/launch.cjs test/ui/fontsizes.mjs",
+    "test:ui": "node main/launch.cjs test/ui/run.mjs && node main/launch.cjs test/ui/editor.mjs && node main/launch.cjs test/ui/ai.mjs && node main/launch.cjs test/ui/library.mjs && node main/launch.cjs test/ui/states.mjs && node main/launch.cjs test/ui/series.mjs && node main/launch.cjs test/ui/overlay.mjs && node main/launch.cjs test/ui/gap.mjs && node main/launch.cjs test/ui/video.mjs && node main/launch.cjs test/ui/lock.mjs && node main/launch.cjs test/ui/scale.mjs && node main/launch.cjs test/ui/reconnect.mjs && node main/launch.cjs test/ui/pdf.mjs && node main/launch.cjs test/ui/fontsizes.mjs",
     "assets": "node main/launch.cjs scripts/gen-assets.cjs",
     "notices": "node scripts/notices.cjs",
     "build:store": "node scripts/build-store.cjs",

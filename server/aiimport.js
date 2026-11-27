@@ -1,6 +1,8 @@
 // Toleranter Import von Lektionen aus Chatbot-Antworten oder .plenum-Dateien
 import JSON5 from 'json5';
 import { normalizeLesson } from '../shared/schema.js';
+import { normalizeSeries, SERIES_FORMAT, orderedCards } from '../shared/series.js';
+import { seriesFromPlan } from '../shared/seriesplan.js';
 import { isObj } from '../shared/util.js';
 
 // JSON aus dem Text lösen: Codeblock bevorzugen, sonst erste ausgeglichene Klammer (String-bewusst)
@@ -145,12 +147,26 @@ export function parseLessonText(raw, { appVersion = '', media = null } = {}) {
   return { lesson: r.lesson, errors: r.errors, repairs: [...notes, ...r.repairs], truncated: wasTruncated };
 }
 
+// Antwort eines KI-Chats auf den Planungs-Auftrag: Themenserie mit Platzhalter-Karten (ohne Inhalte)
+export function parseSeriesPlan(raw, opts = {}) {
+  const { text } = extractJson(raw);
+  const data = text ? tryParse(fixQuotes(text)) : undefined;
+  if (data === undefined || data === null) return { series: null, errors: ['In der Antwort wurde kein lesbarer JSON-Block gefunden.'], notes: [], order: [] };
+  const r = seriesFromPlan(data, opts);
+  return { ...r, order: r.series ? orderedCards(r.series).map((c) => ({ title: c.title, note: c.note || '' })) : [] };
+}
+
 // Mehrere Lektionen (Sicherungsdatei) oder eine einzelne
 export function parseImport(raw, opts) {
   const { text } = extractJson(raw);
   const data = text ? tryParse(fixQuotes(text)) : undefined;
   if (isObj(data) && data.format === 'plenum-sicherung' && Array.isArray(data.lessons)) {
-    return { bundle: data.lessons.map((l) => normalizeLesson(l, opts)).filter((x) => x.lesson) };
+    return { bundle: data.lessons.map((l) => normalizeLesson(l, opts)).filter((x) => x.lesson), series: (Array.isArray(data.series) ? data.series : []).map(normalizeSeries).filter(Boolean) };
+  }
+  // Themenserie mit ihren Lektionen (Exportdatei .plenumserie)
+  if (isObj(data) && data.format === SERIES_FORMAT) {
+    const series = normalizeSeries(data);
+    if (series) return { series: [series], single: true, bundle: (Array.isArray(data.lessons) ? data.lessons : []).map((l) => normalizeLesson(l, opts)).filter((x) => x.lesson) };
   }
   return parseLessonText(raw, opts);
 }

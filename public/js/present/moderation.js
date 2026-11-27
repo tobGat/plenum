@@ -2,7 +2,7 @@
 import { html, raw, delegate, toast } from '../core/dom.js';
 import { ic, logo } from '../core/icons.js';
 import { prompt } from '../core/overlay.js';
-import { awayBadge } from '../core/parts.js';
+import { awayBadge, lockBadge } from '../core/parts.js';
 import { TYPES } from '/shared/types/index.js';
 
 const PHASE = { idle: 'noch nicht gestartet', ready: 'Countdown läuft', running: 'Frage läuft', closed: 'beendet', revealed: 'aufgelöst' };
@@ -21,7 +21,7 @@ export function createModeration({ root, socket }) {
     const s = cur(), i = S.lesson.slides.indexOf(s), nx = S.lesson.slides[i + 1], def = TYPES[s.type], a = S.aggs[s.id];
     const quizCtl = s.type === 'quiz' ? html`<div class="bar">${['start', 'stop', 'reveal'].map((q) => html`<button class="btn" data-action="quiz" data-q="${q}">${ic(q === 'start' ? 'play' : q === 'stop' ? 'stop' : 'eye')}${q === 'start' ? 'Starten' : q === 'stop' ? 'Beenden' : 'Auflösen'}</button>`)}</div><p class="muted">Status: ${PHASE[(a ? a.phase : 'idle')] || (a ? a.phase : 'idle')} · ${a ? a.n : 0} Antworten</p>` : '';
     const hasQuiz = S.lesson.slides.some((x) => x.type === 'quiz');
-    root.innerHTML = String(html`<div id="app" class="moderation"><header class="libhead"><div class="brand">${raw(logo())}<span class="chap">Moderation · ${S.lesson.title}</span></div><div class="hspace"></div><span class="livebadge"><span class="pulse"></span><b>${S.online}</b> online</span>${awayBadge(S.away)}</header>
+    root.innerHTML = String(html`<div id="app" class="moderation"><header class="libhead"><div class="brand">${raw(logo())}<span class="chap">Moderation · ${S.lesson.title}</span></div><div class="hspace"></div><span class="livebadge"><span class="pulse"></span><b>${S.online}</b> online</span>${awayBadge(S.away)}${lockBadge(S.locked)}</header>
       <main class="modmain"><section class="card"><div class="mod-nav"><button class="btn" data-action="prev" ${i === 0 ? 'disabled' : ''}>${ic('arrowl')}</button><div><small class="muted">Folie ${i + 1} von ${S.lesson.slides.length} · ${def.label}</small><h2>${s.title}</h2></div><button class="btn" data-action="next" ${nx ? '' : 'disabled'}>${ic('arrow')}</button></div>
         ${s.notes ? html`<div class="hint">${ic('notebook')}<span>${s.notes}</span></div>` : html`<p class="muted">Keine Notizen zu dieser Folie (im Editor unter „Notizen für die Lehrkraft“).</p>`}
         ${quizCtl}
@@ -42,7 +42,7 @@ export function createModeration({ root, socket }) {
     clearRanking: () => { if (confirm('Rangliste und alle Quiz-Antworten löschen?')) socket.emit('host:clearRanking'); },
   })];
   const load = () => socket.emit('host:state', (st) => { S = st; render(); });
-  const handlers = { agg: (d) => { if (S && S.aggs) { S.aggs[d.slideId] = d.data; if (d.slideId === S.slideId) render(); } }, slideChanged: (d) => { if (S) { S.slideId = d.slideId; render(); } }, players: (p) => { if (S) { S.players = p; render(); } }, online: (n) => { if (S) { S.online = n; render(); } }, away: (n) => { if (S && S.away !== n) { S.away = n; render(); } } };
+  const handlers = { agg: (d) => { if (S && S.aggs) { S.aggs[d.slideId] = d.data; if (d.slideId === S.slideId) render(); } }, slideChanged: (d) => { if (S) { S.slideId = d.slideId; S.locked = 0; render(); } }, locked: (d) => { if (S && d.slideId === S.slideId && S.locked !== d.n) { S.locked = d.n; render(); } }, players: (p) => { if (S) { S.players = p; render(); } }, online: (n) => { if (S) { S.online = n; render(); } }, away: (n) => { if (S && S.away !== n) { S.away = n; render(); } } };
   Object.entries(handlers).forEach(([e, f]) => socket.on(e, f));
   socket.on('connect', load);
   load();

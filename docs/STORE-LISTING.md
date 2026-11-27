@@ -46,7 +46,7 @@ LIVE-ERGEBNISSE
 Umfragen erscheinen als animierte Säulen-, Balken- oder Kreisdiagramme, auf Wunsch mit Vergleichswerten (zum Beispiel „Österreich“) oder als Experiment mit zwei Fassungen derselben Frage. Wortwolken bauen sich live auf, Skalen zeigen Mittelwert und Verteilung. Ein Diagramm-Labor macht sichtbar, wie Darstellungen täuschen können.
 
 IN WENIGEN MINUTEN VORBEREITET
-Im Editor baust du Lektionen aus 17 Folientypen – mit Live-Vorschau, Abschnitten, Diagrammdaten als Tabelle und Rückgängig. Oder du lässt einen KI-Chat deiner Wahl die Stunde vorbereiten, auf Wunsch passend zu Buchseiten oder Arbeitsblättern, die du im Chat anhängst: Plenum schreibt den Auftrag (Prompt), prüft und repariert die Antwort und zeigt dir vor dem Übernehmen, was neu ist. Plenum selbst sendet dabei nichts ins Internet.
+Im Editor baust du Lektionen aus 17 Folientypen – mit Live-Vorschau, Abschnitten, Diagrammdaten als Tabelle und Rückgängig. Oder du lässt einen KI-Chat deiner Wahl die Stunde vorbereiten, auf Wunsch passend zu eigenen Arbeitsblättern oder Unterlagen, die du im Chat anhängst: Plenum schreibt den Auftrag (Prompt), prüft und repariert die Antwort und zeigt dir vor dem Übernehmen, was neu ist. Plenum selbst sendet dabei nichts ins Internet.
 
 DESIGNS UND GRAFIKEN
 Neun Präsentationsdesigns – Standard, Klar, Nacht, Aurora, Tafel, Papier, Bunt, Blaupause und Kontrast – gelten am Beamer und auf den Geräten der Klasse. Die Titelfolie bekommt Motiv und Aufbau nach Wahl. Jede Folie kann eine Grafik tragen: eine der rund 40 mitgelieferten Illustrationen, ein Symbol oder ein eigenes Bild.
@@ -80,7 +80,7 @@ Erste Veröffentlichung.
 9. Arbeitsaufträge mit „Ich bin fertig“ – du siehst, wie weit die Klasse ist
 10. Alle folgen der Folie vorne – oder arbeiten im eigenen Tempo
 11. Editor mit 17 Folientypen und Live-Vorschau
-12. Lektionen mit einem KI-Chat deiner Wahl erstellen und überarbeiten – auch passend zu Buchseiten
+12. Lektionen mit einem KI-Chat deiner Wahl erstellen und überarbeiten – auch passend zu eigenen Arbeitsblättern
 13. Neun Präsentationsdesigns und rund 40 Illustrationen, dazu eigene Bilder
 14. Stände speichern und in der nächsten Stunde weitermachen
 15. Bibliothek nach Fach und Schulstufe filtern und sortieren

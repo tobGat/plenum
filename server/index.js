@@ -10,9 +10,10 @@ import compression from 'compression';
 import QRCode from 'qrcode';
 import { createStore } from './store.js';
 import { createRooms, stateAggs } from './rooms.js';
-import { parseImport } from './aiimport.js';
+import { parseImport, parseSeriesPlan } from './aiimport.js';
 import { normalizeLesson, withNewIds } from '../shared/schema.js';
 import { slug, isObj } from '../shared/util.js';
+import { normalizeSeries, nextLessons } from '../shared/series.js';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const CSP_HOST = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' ws: wss:; frame-src 'self' https://www.youtube-nocookie.com; media-src 'self' https: http:; frame-ancestors 'self'; object-src 'none'; base-uri 'none'; form-action 'self'";
@@ -39,7 +40,7 @@ export async function startServer(opts) {
   const app = express();
   const server = http.createServer(app);
   const io = new Server(server, { maxHttpBufferSize: 1e5 });
-  const rooms = createRooms({ io, store, extraWords: () => store.settings.extraWords || [] });
+  const rooms = createRooms({ io, store, extraWords: () => store.settings.extraWords || [], maxChanges: () => store.settings.maxChanges ?? 2 });
   let port = firstPort;
 
   // ---------- Schutz des Lehrkraft-Bereichs ----------
@@ -96,6 +97,26 @@ export async function startServer(opts) {
     if (!isObj(req.body) || req.body.id !== req.params.id) return fail(res, 400, 'Ungültige Lektion');
     try { res.json({ lesson: store.save(req.body), presenting: presentingId() === req.params.id }); } catch (e) { fail(res, 400, e.message); }
   });
+  // Wie geht es nach dieser Lektion weiter? Je Themenserie, in der sie liegt, die nächsten Themen entlang der Pfeile
+  api.get('/lessons/:id/next', (req, res) => {
+    const out = [];
+    for (const m of store.listSeries()) {
+      if (!m.cards.some((c) => c.lesson === req.params.id)) continue;
+      const S = store.getSeries(m.id);
+      const next = S ? nextLessons(S, req.params.id, (id) => store.has(id)).map((n) => ({ ...n, title: store.list().find((l) => l.id === n.lesson)?.title || n.title })) : [];
+      if (next.length) out.push({ seriesId: S.id, seriesTitle: S.title, next });
+    }
+    res.json(out);
+  });
+  api.get('/lessons/:id/cardimage', (req, res) => {
+    const L = store.get(req.params.id), m = L && L.card && L.card.image;
+    if (!m) return res.status(404).end();
+    res.set({ 'Content-Type': m.mime, 'Cache-Control': 'private, max-age=31536000, immutable' });
+    return res.end(Buffer.from(m.data, 'base64'));
+  });
+  api.put('/lessons/:id/card', (req, res) => {
+    try { return store.has(req.params.id) ? res.json({ card: store.setCard(req.params.id, req.body) }) : fail(res, 404, 'Lektion nicht gefunden'); } catch (e) { return fail(res, 400, e.message); }
+  });
   api.post('/lessons/:id/duplicate', (req, res) => { const L = store.duplicate(req.params.id); return L ? res.json(L) : fail(res, 404, 'Lektion nicht gefunden'); });
   api.delete('/lessons/:id', (req, res) => {
     if (presentingId() === req.params.id) return fail(res, 409, 'Diese Lektion wird gerade präsentiert.');
@@ -114,23 +135,64 @@ export async function startServer(opts) {
     const d = store.loadState(id, stateId);
     return d ? res.json(stateAggs(L, d, { extraWords: store.settings.extraWords || [] })) : fail(res, 404, 'Stand nicht gefunden');
   });
-  api.get('/backup', (req, res) => download(res, `plenum-sicherung-${new Date().toISOString().slice(0, 10)}.json`, { format: 'plenum-sicherung', version: 1, createdAt: new Date().toISOString(), lessons: store.list().map((m) => store.get(m.id)).filter(Boolean) }));
+  api.get('/backup', (req, res) => download(res, `plenum-sicherung-${new Date().toISOString().slice(0, 10)}.json`, { format: 'plenum-sicherung', version: 1, createdAt: new Date().toISOString(), lessons: store.list().map((m) => store.get(m.id)).filter(Boolean), series: store.listSeries().map((m) => store.getSeries(m.id)).filter(Boolean) }));
+
+  // ---------- Themenserien ----------
+  api.get('/series', (req, res) => res.json(store.listSeries()));
+  // Die Serie ohne Bilddaten (der Editor braucht sie nicht); das Bild kommt über /series/<id>/image
+  const lean = (S) => (S && S.look && S.look.image ? { ...S, look: { ...S.look, image: undefined } } : S);
+  api.get('/series/:id', (req, res) => { const S = store.getSeries(req.params.id); return S ? res.json(lean(S)) : fail(res, 404, 'Themenserie nicht gefunden'); });
+  api.get('/series/:id/image', (req, res) => {
+    const S = store.getSeries(req.params.id), m = S && S.look && S.look.image;
+    if (!m) return res.status(404).end();
+    res.set({ 'Content-Type': m.mime, 'Cache-Control': 'private, max-age=31536000, immutable' });
+    return res.end(Buffer.from(m.data, 'base64'));
+  });
+  api.put('/series/:id/look', (req, res) => {
+    try { return store.hasSeries(req.params.id) ? res.json({ look: store.setSeriesLook(req.params.id, isObj(req.body) ? req.body : {}) }) : fail(res, 404, 'Themenserie nicht gefunden'); } catch (e) { return fail(res, 400, e.message); }
+  });
+  api.post('/series/plan', (req, res) => res.json(parseSeriesPlan(String(req.body?.text || '').slice(0, 2e6), { subject: String(req.body?.subject || ''), grade: String(req.body?.grade || '') })));
+  api.post('/series', (req, res) => { try { res.json(store.createSeries(isObj(req.body?.series) ? req.body.series : null)); } catch (e) { fail(res, 400, e.message); } });
+  api.put('/series/:id', (req, res) => {
+    if (!isObj(req.body) || req.body.id !== req.params.id) return fail(res, 400, 'Ungültige Themenserie');
+    try { res.json(lean(store.saveSeries(req.body, { keepLook: true }))); } catch (e) { fail(res, 400, e.message); }
+  });
+  api.post('/series/:id/duplicate', (req, res) => { const S = store.duplicateSeries(req.params.id); return S ? res.json(S) : fail(res, 404, 'Themenserie nicht gefunden'); });
+  api.delete('/series/:id', (req, res) => (store.removeSeries(req.params.id) ? res.json({ ok: true }) : fail(res, 404, 'Themenserie nicht gefunden')));
+  // Weitergeben: die Serie samt allen enthaltenen Lektionen in einer Datei
+  api.get('/series/:id/export', (req, res) => {
+    const S = store.getSeries(req.params.id);
+    if (!S) return fail(res, 404, 'Themenserie nicht gefunden');
+    return download(res, `${slug(S.title)}.plenumserie`, { ...S, lessons: S.cards.map((c) => c.lesson && store.get(c.lesson)).filter(Boolean) });
+  });
   api.post('/import/parse', (req, res) => {
     const base = req.body?.baseLessonId ? store.get(String(req.body.baseLessonId)) : null; // Überarbeiten: Bilder der Lektion behalten
     res.json(parseImport(String(req.body?.text || '').slice(0, 80e6), { appVersion, media: base && base.media ? base.media : null }));
   });
   api.post('/import/commit', (req, res) => {
     const list = Array.isArray(req.body?.lessons) ? req.body.lessons : [req.body?.lesson];
-    const mode = req.body?.mode;
+    const mode = req.body?.mode, withSeries = Array.isArray(req.body?.series), idMap = {};
     try {
-      const saved = list.map((raw) => {
+      const saved = (withSeries ? list.filter(Boolean) : list).map((raw) => {
         const r = normalizeLesson(raw, { appVersion });
         if (!r.lesson) throw new Error(r.errors.join(' '));
         let L = r.lesson;
+        const oldId = L.id;
         if (mode === 'replace' && presentingId() === L.id) throw new Error('Diese Lektion wird gerade präsentiert.');
         if (mode === 'copy' || (mode !== 'replace' && store.has(L.id))) L = withNewIds(L);
+        else if (mode === 'replace' && !L.card) { const old = store.get(L.id); if (old && old.card) L.card = old.card; } // z. B. nach „Mit KI überarbeiten“: Farbe und Grafik der Karte behalten
+        idMap[oldId] = L.id;
         return store.save(L);
       });
+      if (withSeries) { // Themenserien: Karten auf die (eventuell als Kopie) angelegten Lektionen zeigen lassen
+        const series = req.body.series.map((raw) => {
+          const S = normalizeSeries(raw);
+          if (!S) throw new Error('Ungültige Themenserie');
+          S.cards.forEach((c) => { if (c.lesson && idMap[c.lesson]) c.lesson = idMap[c.lesson]; });
+          return store.createSeries(S);
+        });
+        return res.json({ lessons: saved.length, series });
+      }
       res.json(saved.length === 1 ? saved[0] : saved);
     } catch (e) { fail(res, 400, e.message); }
   });
@@ -165,6 +227,7 @@ export async function startServer(opts) {
     const b = req.body || {}, patch = {};
     if (typeof b.adapter === 'string') patch.adapter = b.adapter.slice(0, 60);
     if (Array.isArray(b.extraWords)) patch.extraWords = b.extraWords.map((w) => String(w).trim().slice(0, 30)).filter(Boolean).slice(0, 200);
+    if ([-1, 0, 1, 2, 3, 5].includes(b.maxChanges)) patch.maxChanges = b.maxChanges; // Änderungen der Antwort je Aufgabe (−1 = unbegrenzt)
     if (typeof b.seenWelcome === 'boolean') patch.seenWelcome = b.seenWelcome;
     res.json(store.setSettings(patch));
   });

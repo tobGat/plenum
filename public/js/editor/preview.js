@@ -134,7 +134,9 @@ function render() {
       const pr = prefs[s.id] || (prefs[s.id] = {});
       if (M.demo && ['mc', 'truefalse', 'sort'].includes(s.type) && pr.eval === undefined) pr.eval = true;
       if (!M.demo && fresh) pr.eval = false;
-      const c = { lesson: L, sec: secCol, agg: D.agg, prefs: pr, local: local[s.id] || (local[s.id] = {}), key: 'c', online: D.online, joinUrl: M.joinUrl || '',
+      // Auswertung einer anderen Folie (Vorher/Nachher der Skala): im Druck mitgeschickt, sonst aus den Beispielantworten
+      const aggOf = (id) => { const o = L.slides.find((x) => x.id === id); return P ? (P.before && P.before[id]) || null : M.demo && o ? demo(o).agg : null; };
+      const c = { lesson: L, sec: secCol, agg: D.agg, aggOf, prefs: pr, local: local[s.id] || (local[s.id] = {}), key: 'c', online: D.online, joinUrl: M.joinUrl || '',
         next: L.slides[i + 1], render: () => render(), goto: () => {}, theme: theme || 'standard', mediaUrl };
       if (P) {
         // Druck: mit Ergebnissen die Auswertung, mit Lösungen die markierten Antworten, sonst nur die Fragen

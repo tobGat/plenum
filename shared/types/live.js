@@ -1,5 +1,5 @@
 // Live-Typen: Umfrage (inkl. Split-Experiment), Skala, Wortwolke, offene Antworten
-import { F, fp, okInt } from './common.js';
+import { F, fp, okInt, changedAny, changedSlot } from './common.js';
 import { isFlagged } from '../filter.js';
 import { str } from '../util.js';
 
@@ -39,8 +39,23 @@ export const poll = {
     const counts = {}; for (const k of new Set([...Object.keys(A.counts), ...Object.keys(B.counts)])) counts[k] = (A.counts[k] || 0) + (B.counts[k] || 0);
     return { counts, n: all.length, A, B, done: all.length };
   },
+  changes: (prev, v) => changedAny([...prev.c].sort(), [...v.c].sort()),
   fingerprint: (s) => fp(s.options, s.multi, s.splitA, s.splitB),
 };
+
+// Vorher/Nachher: die letzte frühere Skala-Folie derselben Lektion, die (bei gleicher Stufenzahl) mindestens eine
+// gleiche Aussage enthält. map[i] = Index der gleichen Aussage auf der früheren Folie oder -1.
+const sameText = (t) => str(t).toLowerCase().replace(/\s+/g, ' ').trim();
+export function scaleBefore(lesson, slide) {
+  const slides = (lesson && lesson.slides) || [], at = slides.findIndex((x) => x.id === slide.id);
+  for (let i = at - 1; i >= 0; i--) {
+    const p = slides[i];
+    if (p.type !== 'scale' || p.steps !== slide.steps || !Array.isArray(p.statements)) continue;
+    const keys = p.statements.map(sameText), map = slide.statements.map((st) => keys.indexOf(sameText(st)));
+    if (map.some((k) => k >= 0)) return { slideId: p.id, index: i, map };
+  }
+  return null;
+}
 
 export const scale = {
   type: 'scale', label: 'Skala', icon: 'scale', group: 'Live', live: true,
@@ -63,6 +78,7 @@ export const scale = {
     all.forEach((a) => a.forEach((v, i) => { if (v === null) return; const it = items[i]; it.counts[v] = (it.counts[v] || 0) + 1; it.n++; it.sum += v; }));
     return { items: items.map((it) => ({ counts: it.counts, n: it.n, mean: it.n ? it.sum / it.n : null })), students: all.length, done: all.length };
   },
+  changes: changedSlot,
   fingerprint: (s) => fp(s.statements, s.steps),
 };
 
@@ -94,6 +110,7 @@ export const wordcloud = {
     words.sort((a, b) => b.n - a.n || a.text.localeCompare(b.text, 'de'));
     return { words, students: Object.keys(subs).length, done: Object.keys(subs).length, showAll: !!meta.showAll };
   },
+  changes: (prev, v) => changedAny(prev.map((w) => w.toLowerCase()), v.map((w) => w.toLowerCase())),
   fingerprint: () => 'wordcloud',
 };
 
@@ -121,5 +138,6 @@ export const open = {
     items.sort((a, b) => a.at - b.at);
     return { items, students: Object.keys(subs).length, done: Object.keys(subs).length, showAll: !!meta.showAll };
   },
+  changes: (prev, v, s) => s.maxAnswers === 1 && !!prev[0] && prev[0].text !== v[0].text, // weitere Antworten anhängen zählt nicht
   fingerprint: () => 'open',
 };

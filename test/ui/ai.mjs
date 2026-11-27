@@ -60,15 +60,15 @@ async function main() {
   // Material: nur ankreuzen und beschreiben – die Dateien hängt man direkt im KI-Chat an
   check(await js(w, `document.getElementById('matMore').hidden`), 'Material-Felder sollten zunächst verborgen sein');
   await js(w, `(()=>{const c=document.getElementById('matOn'); c.checked=true; c.dispatchEvent(new Event('change',{bubbles:true}));})()`);
-  await setVal(w, '#matDesc', 'Buch S. 40–42, Ü2–Ü4');
+  await setVal(w, '#matDesc', 'Arbeitsblatt Brüche, Aufgaben 2–4');
   await sleep(300); await shot(w, 'k01-formular');
   await mustClick(w, '[data-ai="next"]', 'Prompt erstellen');
   await waitFor(w, `document.querySelector('.aiprompt textarea')`, 3000, 'Prompt-Schritt');
   const prompt = await js(w, `document.querySelector('.aiprompt textarea').value`);
   check(/THEMA: Photosynthese/.test(prompt) && /genau 7 Folien/.test(prompt), 'Prompt enthält Thema/Umfang nicht');
   check(!/"sources" – /.test(prompt), 'Abgewählter Typ steht im Prompt');
-  check(/Ich hänge dir in diesem Chat Material an[^\n]*Buch S\. 40–42, Ü2–Ü4/.test(prompt), 'Material fehlt im Prompt');
-  check(/Zuerst im Buch/.test(prompt) && /"task" – Arbeitsauftrag/.test(prompt), 'Buch-Aufträge fehlen im Prompt');
+  check(/Ich hänge dir in diesem Chat Material an[^\n]*Arbeitsblatt Brüche, Aufgaben 2–4/.test(prompt), 'Material fehlt im Prompt');
+  check(/Zuerst am Arbeitsblatt/.test(prompt) && /"task" – Arbeitsauftrag/.test(prompt), 'Aufträge zum Material fehlen im Prompt');
   check((await js(w, `document.querySelector('.aisteps li').innerText`)).includes('Material im KI-Chat anhängen'), 'Schritt „Material anhängen“ fehlt');
   check((await js(w, `document.querySelectorAll('.aisteps > li').length`)) === 4, 'Es sollten vier Schritte sein');
   await sleep(200); await shot(w, 'k02-material');
